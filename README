@@ -1,4 +1,4 @@
-XML::GDOME version 0.79
+XML::GDOME version 0.80
 =======================
 
 REQUIREMENTS
@@ -7,8 +7,9 @@ Requires gdome2 0.7.1 or higher, available from
 http://phd.cs.unibo.it/gdome2/#downloads
 
 Note that release 0.7.1 has a bug with calling iterateNext on an
-empty XPath result set.  The lastest gdome2 CVS contains a fix
-for this bug.  To checkout the files from CVS, run:
+empty XPath result set.  Also, the XML::GDOME::XSLT testset fails
+on 0.7.1.  The lastest gdome2 CVS contains a fix
+for these bugs.  To checkout the files from CVS, run:
 
  $ export CVSROOT=':pserver:anonymous@anoncvs.gnome.org:/cvs/gnome'
  $ cvs login      # press 'return' for password

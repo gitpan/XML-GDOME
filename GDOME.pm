@@ -5,7 +5,7 @@ package XML::GDOME;
 use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
-$VERSION = '0.79';
+$VERSION = '0.80';
 
 require DynaLoader;
 require Exporter;
@@ -418,8 +418,10 @@ sub appendTextNode {
 
 sub appendText {
   my ($node, $xmlString) = @_;
-  my $text = $node->getOwnerDocument->createTextNode($xmlString);
-  $node->appendChild($text);
+  if ($xmlString) {
+    my $text = $node->getOwnerDocument->createTextNode($xmlString);
+    $node->appendChild($text);
+  }
   return;
 }
 
