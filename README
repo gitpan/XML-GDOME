@@ -1,19 +1,23 @@
-XML::GDOME version 0.77
+XML::GDOME version 0.78
 =======================
 
 REQUIREMENTS
 
-Requires gdome2 0.7.1 or higher, available from gnome CVS.  To
-checkout the files from CVS, run:
+Requires gdome2 0.7.1 or higher, available from
+http://phd.cs.unibo.it/gdome2/#downloads
 
-$ export CVSROOT=':pserver:anonymous@anoncvs.gnome.org:/cvs/gnome'
-$ cvs login      # press 'return' for password
-$ cvs -z4 checkout gdome2
-$ ./autogen.sh
-$ ./configure
-$ make
-$ make check
-$ make install
+Note that release 0.7.1 has a bug with calling iterateNext on an
+empty XPath result set.  The lastest gdome2 CVS contains a fix
+for this bug.  To checkout the files from CVS, run:
+
+ $ export CVSROOT=':pserver:anonymous@anoncvs.gnome.org:/cvs/gnome'
+ $ cvs login      # press 'return' for password
+ $ cvs -z4 checkout gdome2
+ $ ./autogen.sh
+ $ ./configure
+ $ make
+ $ make check
+ $ make install
 
 For gdome2 related questions, e-mail the gdome2 mailing list:
 http://mail.gnome.org/mailman/listinfo/gdome
@@ -36,7 +40,7 @@ make install
 
 COPYRIGHT AND LICENCE
 
-Copyright 2001, 2002 T.J. Mather.  
-Copyright 2001, AxKit.com Ltd. All rights reserved. 
+Copyright 2002 T.J. Mather.  
+Copyright 2001 AxKit.com Ltd. All rights reserved. 
 XML::GDOME is free software;
 you may redistribute it and/or modify it under the same terms as Perl itself. 

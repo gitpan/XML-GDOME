@@ -11,8 +11,8 @@ extern "C" {
 #include <libxml/xmlerror.h>
 #include "gdome.h"
 #include "gdome-xpath.h"
-#include "gdome-traversal.h"
-#include "gdome-events.h"
+/*#include "gdome-traversal.h"
+#include "gdome-events.h"*/
 
 #include "dom.h"
 

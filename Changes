@@ -1,5 +1,9 @@
 Revision history for Perl extension XML::GDOME
 
+0.78  April 16th, 2002
+	- Removed #include <gdome-traversal.h> from GDOME.xs.
+	- Added iterator method (Richard Titmuss)
+
 0.77  March 22nd, 2002
 	- API CHANGE: Removed GDOME_ prefix from GDOME constants.
 	- getElemenetsByTagName(NS)? now returns array if wantarray is set

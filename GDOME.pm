@@ -5,7 +5,7 @@ package XML::GDOME;
 use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
-$VERSION = '0.77';
+$VERSION = '0.78';
 
 require DynaLoader;
 require Exporter;
@@ -278,6 +278,18 @@ sub getChildNodes {
   } else {
     return $nl;
   }
+}
+
+sub iterator {
+  my $self = shift;
+  my $funcref = shift;
+  my $child = undef;
+
+  my $rv = $funcref->( $self );
+  foreach $child ( $self->getChildNodes() ){
+    $rv = $child->iterator( $funcref );
+  }
+  return $rv;
 }
 
 package XML::GDOME::Element;
