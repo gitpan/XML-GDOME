@@ -1,0 +1,586 @@
+#!/usr/bin/perl
+
+# copyright 2001, T.J. Mather
+
+use strict;
+use XML::LibXML;
+use Tie::IxHash;
+use Data::Dumper;
+
+my $gdome_dir = $ARGV[0];
+
+unless ($gdome_dir) {
+  print STDERR "Usage: $0 gdome_dir\n";
+  exit;
+}
+
+#TODO
+my %class_description = ();
+
+my %abbrv_lookup = (df => 'DocumentFragment',
+		    di => 'DOMImplementation',
+		    doc => 'Document',
+		    n => 'Node',
+		    nl => 'NodeList',
+		    nnm => 'NamedNodeMap',
+		    cd => 'CharacterData',
+		    a => 'Attr',
+		    el => 'Element',
+		    t => 'Text',
+		    c => 'Comment',
+		    dt => 'DocumentType',
+		    not => 'Notation',
+		    ent => 'Entity',
+		    er => 'EntityReference',
+		    pi => 'ProcessingInstruction');
+
+my %return_var = (Document => 'doc',
+		  ProcessingInstruction => 'pi',
+		  DocumentFragment => 'docFrag',
+		  Comment => 'comment',
+		  DOMImplementation => 'DOMImpl',
+		  CDATASection => 'cdata',
+		  Element => 'elem',
+		  Node => 'node',
+		  Event => 'event',
+		  EntityReference => 'entRef',
+		  DOMString => 'str',
+		  Boolean => 'bool',
+		  Text => 'text',
+		  DocumentType => 'docType',
+		  NodeList => 'nodeList',
+		  Attr => 'attr',
+		  NamedNodeMap => 'nnm',
+		  gulong => 'int',
+		 );
+
+# parse docs
+# will eventually use to generate PODs
+my $docs;
+my ($method_doc, $class, $in_return_section, $in_exc_section);
+open DOC, "$gdome_dir/libgdome/gdome.c";
+while (<DOC>) {
+  chomp;
+  if ($_ eq '/**') {
+    $method_doc = <DOC>;
+    $method_doc =~ s!^ \* !!;
+    $method_doc =~ s!:\n$!!;
+
+    $method_doc =~ m!^gdome_(\w+)_(.+)!;
+    $class = $abbrv_lookup{$1};
+    $method_doc = $2;
+
+    # get variables
+    my $var;
+    tie %{$docs->{$class}->{$method_doc}->{vars}}, "Tie::IxHash";
+    while (<DOC>) {
+      last unless m!^ \* (\@(\w+):  )?(.+)\n!;
+      $var = $2 if $2;
+      my $desc = $3;
+      next if ($var eq 'self' || $var eq 'exc');
+      $docs->{$class}->{$method_doc}->{vars}->{$var} .= $desc;
+    }
+  }
+  if ($method_doc) {
+    my $text = $_;
+    if ($_ eq ' */') {
+      $method_doc = undef;
+      $in_return_section = 0;
+      $in_exc_section = undef;
+      next;
+    } elsif ($_ =~ m!^ \*\s*$!) {
+      next;
+    } elsif (m!^ \* Returns: !) {
+      $in_return_section = 1;
+      $in_exc_section = undef;
+      $text = $';
+    } elsif (m!^ \* \%(GDOME.*): !) {
+      $in_exc_section = $1;
+      $in_return_section = 0;
+      $text = $';
+    } else {
+      $text =~ s!^ \*!!;
+    }
+    $text =~ s!\@(\w+) !I<$1> !g;
+    $text =~ s!\%NULL!undef!g;
+    $text =~ s!\%TRUE!1!g;
+    $text =~ s!\%FALSE!0!g;
+    $text =~ s!\%0!0!g;
+    $text =~ s!\%GDOME_(\w+)_NODE!$1!g;
+
+    if ($in_return_section) {
+      $docs->{$class}->{$method_doc}->{return} .= $text;
+    } elsif ($in_exc_section) {
+      $docs->{$class}->{$method_doc}->{exc}->{$in_exc_section} .= $text;
+    } else {
+      $docs->{$class}->{$method_doc}->{desc} .= $text;
+    }
+  }
+  $docs->{$class}->{$method_doc}->{desc} =~ s!^\s+!!g;
+}
+close DOC;
+
+#print Dumper($docs->{Node}->{firstChild});
+
+open XS, ">GDOME.xs";
+open PM, ">GDOME.pm";
+
+print XS <<END;
+/* generated automatically from generate.pl */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "EXTERN.h"
+#include "perl.h"
+#include "XSUB.h"
+
+#include <libxml/hash.h>
+#include "gdome.h"
+
+#ifdef __cplusplus
+}
+#endif
+
+char *errorMsg[101];
+void
+gdome_perl_load_error_strings() {
+END
+
+# constants
+my %constants;
+tie %constants, "Tie::IxHash";
+open HEADER, "$gdome_dir/libgdome/gdome.h";
+while (<HEADER>) {
+  if (m!(GDOME_[A-Z_]*) = (\d+)!) {
+    $constants{$1} = $2;
+  }
+}
+close HEADER;
+
+while (my ($k, $v) = each %constants) {
+  next unless $k =~ m!_ERR!;
+  print XS qq{  errorMsg[$v] = "$k";\n};
+}
+
+print XS "}\n\n";
+
+print PM q{package XML::GDOME;
+
+# generated automatically from generate.pl
+
+use strict;
+use vars qw($VERSION @ISA @EXPORT);
+
+$VERSION = '0.7.0';
+
+require DynaLoader;
+require Exporter;
+@ISA = qw(DynaLoader Exporter);
+
+bootstrap XML::GDOME $VERSION;
+
+my $di = XML::GDOME::DOMImplementation::mkref();
+
+
+};
+
+my $parser = XML::LibXML->new;
+my $core = $parser->parse_file("$gdome_dir/test/apigen/core.xml");
+my $core_api = $core->getDocumentElement;
+
+# uncomment when we are ready to support Events module
+# note that we will need perl callbacks for this - see man perlcall
+#my $events = $parser->parse_file('events.xml');
+#my $events_api = $events->getDocumentElement;
+
+my @nodes = $core_api->findnodes("//INTERFACE");
+#push @nodes, $events_api->findnodes("//INTERFACE");
+my $firstTime = 1;
+my @isa_strings;
+my %parent_class;
+for (@nodes) {
+  my $class = $_->getAttribute("NAME");
+  next if $class eq 'DOMString';
+  my $parentNode = $_->parentNode;
+  if ($parentNode->getName eq 'INTERFACE') {
+    my $parent_class = $parentNode->getAttribute("NAME");
+    push @isa_strings, "\@XML::GDOME::${class}::ISA = 'XML::GDOME::$parent_class';";
+    $parent_class{$class} = $parent_class;
+  }
+
+  my %synopsis;
+  tie %synopsis, "Tie::IxHash";
+  my @description;
+  my $prefix = $_->getAttribute("PREFIX");
+  print XS "MODULE = XML::GDOME       PACKAGE = XML::GDOME::$class\n\n";
+  print XS <<END if $firstTime == 1;
+PROTOTYPES: DISABLE
+
+BOOT:
+    gdome_perl_load_error_strings();
+
+END
+  $firstTime = 0;
+
+  if($class eq 'Node'){
+    print XS <<END;
+int
+gdome_ref(self)
+        GdomeNode * self
+    CODE:
+        RETVAL = (int) self;
+    OUTPUT:
+        RETVAL
+
+END
+  }
+
+  my @attr = $_->getElementsByTagName("ATTR");
+  my @method = $_->getElementsByTagName("METHOD");
+  for (@attr) {
+    my $readonly = $_->getAttribute("READONLY");
+    my $type = $_->getAttribute("TYPE");
+    my $bless = getBless($type);
+    my $method = $_->getAttribute("NAME");
+    my $Method = ucfirst($method);
+    my ($r) = ($type =~ m!^Gdome(\w*)!);
+    my $return_var;
+    if ($method eq 'nodeType') {
+      $return_var = 'type';
+    } elsif ($type eq 'gulong') {
+      $return_var = 'int';
+    } else {
+      $return_var = $return_var{$r};
+    }
+
+    my $synopsis = qq{\$$return_var = \$${prefix}->get$Method();};
+    $synopsis{$method} = $synopsis;
+    unless ($readonly eq 'YES') {
+      print XS <<END;
+void
+set$Method(self, val)
+        Gdome$class * self
+        $type val
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        gdome_${prefix}_set_$method(self, val, &exc);
+
+END
+      my $synopsis = qq{\$${prefix}->set$Method(\$$return_var);};
+      $synopsis{"set_$method"} = $synopsis;
+    }
+    print XS <<END;
+$type
+$method(self)
+        Gdome$class * self
+    ALIAS:
+        XML::GDOME::${class}::get$Method = 1
+    PREINIT:
+END
+    print XS <<END if $bless;
+        char * CLASS = "$bless";
+END
+    print XS <<END;
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_${prefix}_$method(self, &exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+END
+  }
+
+  for (@method) {
+    my $return = $_->getAttribute("TYPE");
+    my $method = $_->getAttribute("NAME");
+    next if $method eq 'query_interface';
+    next if $method =~ m!WithEntitiesTable$!;
+    # for some inexplicable reason, causes segfaults when uncommented
+#    next if $method =~ m!Event!;
+    if ($method eq 'saveDocToMemory') {
+      print XS <<END;
+char *
+saveDocToString(self,doc,mode)
+        GdomeDOMImplementation * self
+        GdomeDocument * doc
+        GdomeSavingCode mode
+    PREINIT:
+        char ** mem = malloc(sizeof(char *));
+        GdomeException exc;
+    CODE:
+        if ( gdome_di_saveDocToMemory(self,doc,mem,mode,&exc) ) {
+          RETVAL = *mem;
+        }
+    OUTPUT:
+        RETVAL
+
+END
+      next;
+    }
+    my $raw = $_->getAttribute("RAW");
+    my @param = $_->getElementsByTagName("PARAM");
+    my @args = ();
+    my $exception = ',&exc';
+    my $bless = getBless($return);
+    my @strings;
+    unless ($raw eq 'YES') {
+      push @args, { type => "Gdome$class *",
+		    name => "self" };
+    }
+    for (@param) {
+      my $name = $_->getAttribute("NAME");
+      my $type = $_->getAttribute("TYPE");
+      $name = 'str' if $name eq 'buffer';
+      unless ($name) {
+	$exception = undef;
+      } else {
+	push @args, { type => $type,
+		      name => $name };
+	if ($type eq 'DOMString') {
+	  push @strings, $name;
+	}
+      }
+    }
+    my $arg_names = join(",",map {$_->{name}} @args);
+    my $syn_names = join(",",map {'$' . $_->{name}} grep {$_->{name} ne 'self' } @args);
+
+    unless ($method =~ m!Event!) {
+      if ($return eq 'void') {
+        $synopsis{$method} = qq{\$${prefix}->$method($syn_names);} unless ($method eq 'ref' || $method eq 'unref');
+      } elsif ($method eq 'mkref') {
+        my ($r) = ($return =~ m!^Gdome(\w*)!);
+        $synopsis{$method} = qq{\$$return_var{$r} = XML::GDOME::${class}::$method($syn_names);};
+      } else {
+        my ($r) = ($return =~ m!^Gdome(\w*)!);
+        $synopsis{$method} = qq{\$$return_var{$r} = \$${prefix}->$method($syn_names);};
+      }
+    }
+
+    print XS <<END;
+$return
+$method($arg_names)
+END
+    for (@args) {
+      print XS "        $_->{type} $_->{name}\n";
+    }
+    if ($method eq 'unref') {
+      print XS <<END;
+    ALIAS:
+        XML::GDOME::${class}::DESTROY = 1
+END
+    }
+    if ($exception || $bless) {
+      print XS "    PREINIT:\n";
+    }
+    if ($bless) {
+      print XS qq{        char * CLASS = "$bless";\n};
+    }
+    if ($exception) {
+      print XS "        GdomeException exc;\n";
+    }
+    print XS "    CODE:\n";
+    if ($return eq 'void') {
+      print XS qq{        gdome_${prefix}_$method($arg_names$exception);\n};
+      if ($exception) {
+        print XS <<END;
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+END
+      }
+      print XS "\n";
+    } else {
+      print XS "        RETVAL = gdome_${prefix}_$method($arg_names$exception);\n";
+      for (@strings) {
+        print XS "        gdome_str_unref($_);\n";
+      }
+      if ($exception) {
+        print XS <<END;
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+END
+      }
+      print XS <<END;
+    OUTPUT:
+        RETVAL
+
+END
+    }
+  }
+  if($class eq 'Document') {
+    $synopsis{"toString"} = q{$str = $doc->toString($mode);};
+    $docs->{Document}->{toString} = {
+				     desc => "Save the DOM tree of the Document to a string",
+				     vars => {
+					      mode => "the indentation mode wanted"
+					     },
+				     return => "string representation of DOM tree",
+				    };
+  }
+
+  unless ($class eq 'DOMImplementation') {
+    open POD, ">lib/XML/GDOME/$class.pod";
+    print POD <<END;
+=head1 NAME
+
+  XML::GDOME::$class - Interface $class implementation.
+
+=head1 SYNOPSIS
+
+END
+    my @synopsis = values %synopsis;
+    alignEquals(\@synopsis);
+    for (@synopsis) {
+      print POD "  $_\n";
+    }
+    my $parent_class = $class;
+    my @class_hierarchy;
+    while ($parent_class = $parent_class{$parent_class}) {
+      unshift @class_hierarchy, $parent_class;
+    }
+    if (@class_hierarchy) {
+      print POD <<END;
+
+=head1 CLASS INHERITANCE
+
+END
+      for my $class (@class_hierarchy) {
+        print POD "L<XML::GDOME::$class> > ";
+      }
+      print POD "XML::GDOME::$class\n\n";
+    }
+#    print POD <<END;
+#
+#=head1 DESCRIPTION
+#
+#$class_description{$class}
+#
+#END
+
+    print POD <<END;
+
+=head1 METHODS
+
+=over 4
+
+END
+
+    while (my ($method, $synopsis) = each %synopsis) {
+      my $hash_ref = $docs->{$class}->{$method};
+      if ($hash_ref) {
+        print POD "\n=item $synopsis{$method}\n\n";
+        print POD "$hash_ref->{desc}\n\n" if exists $hash_ref->{desc};
+        while (my ($k, $v) = each %{$hash_ref->{vars}}) {
+          print POD "I<C<$k>>: $v\n\n";
+        }
+        print POD "I<Returns>: $hash_ref->{return}\n\n" if exists $hash_ref->{return};
+        while (my ($k, $v) = each %{$hash_ref->{exc}}) {
+          print POD "C<$k>: $v\n\n";
+        }
+      }
+    }
+
+    print POD <<END;
+
+=back
+
+END
+
+    close POD;
+  }
+
+}
+
+print PM q{@EXPORT = qw( } . join(" ", keys %constants) . qq{ );\n\n};
+
+while (my ($k, $v) = each %constants) {
+  print PM "sub $k(){$v;}\n";
+}
+print PM "\n";
+
+alignEquals(\@isa_strings);
+print PM join("\n",@isa_strings);
+
+print PM q{
+
+sub createDocFromString {
+  my $class = shift;
+  my $str = shift;
+  my $mode = shift || 0;
+  return $di->createDocFromMemory($str, $mode);
+}
+
+sub createDocFromURI {
+  my $class = shift;
+  my $uri = shift; 
+  my $mode = shift || 0;
+  return $di->createDocFromURI($uri, $mode);
+}
+
+sub createDocument {
+  my $class = shift;
+  return $di->createDocument(@_);
+}
+
+sub createDocumentType {
+  my $class = shift;
+  return $di->createDocumentType(@_);
+}
+
+sub hasFeature {
+  my $class = shift;
+  return $di->hasFeature(@_);
+}
+
+package XML::GDOME::Document;
+
+sub toString {
+  my $doc = shift;
+  my $mode = shift || 0;
+  return $di->saveDocToString($doc,$mode);
+}
+
+1;
+};
+
+close XS;
+close PM;
+
+sub getBless {
+  my ($struct) = @_;
+  if ($struct =~ m!^Gdome(.*) \*$!) {
+    unless ($struct eq 'GdomeDOMString *') {
+      return "XML::GDOME::$1";
+    }
+    return;
+  }
+}
+
+sub alignEquals {
+  my $lines = shift;
+  my $max_indent = 0;
+  for (@$lines) {
+    if (m!=!g) {
+      my $indent = pos;
+      pos = 0;
+      if ($indent > $max_indent) {
+	$max_indent = $indent;
+      }
+    }
+  }
+  for (@$lines) {
+    if (m!=!g) {
+      my $indent = pos;
+      my $spacing = " " x ($max_indent - $indent);
+      $_ =~ s!=!$spacing=!;
+    } else {
+      $_ = (' ' x ($max_indent + 1)) . $_;
+    }
+  }
+}

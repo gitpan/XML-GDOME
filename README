@@ -1,0 +1,28 @@
+XML::GDOME version 0.7.0
+=======================
+
+DESCRIPTION
+
+XML::GDOME is a perl module that provides the DOM Level 2 Core API
+for accessing XML documents.
+
+It uses a XS wrapper around the libgdome library.
+
+REQUIREMENTS
+
+Requires libgdome 0.7.0, available from
+http://phd.cs.unibo.it/gdome2/
+
+INSTALLATION
+
+To install, run
+
+perl Makefile.PL
+make
+make test
+make install
+
+COPYRIGHT AND LICENCE
+
+Copyright (c) 2001 T.J. Mather.  XML::GDOME is free software;
+you may redistribute it and/or modify it under the same terms as Perl itself. 
