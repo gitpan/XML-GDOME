@@ -1,5 +1,9 @@
 Revision history for Perl extension XML::GDOME
 
+0.84  November 28th, 2003
+	- Updated Makefile.PL to work with gdome2 0.8 - see
+	rt.cpan.org ticket 4410
+
 0.83  July 31st, 2003
 	- Added CLONE method in increment reference count - first stage of
 	  support for threading (Stephen Clouse)

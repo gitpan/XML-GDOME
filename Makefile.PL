@@ -17,7 +17,8 @@ eval {
     print "running gdome-config... ";
     my $ver = backtick('gdome-config --version');
     my ($major, $minor, $point) = $ver =~ /(\d+).(\d+)\.(\d+)/g;
-    die "VERSION" unless $major == 0 && $minor == 7 && $point >= 2;
+    die "VERSION" unless $major == 0 && (($minor == 7 && $point >= 2)
+					 || ($minor >= 8));
     $config{LIBS} ||= backtick('gdome-config --libs');
     $config{INC} ||= backtick('gdome-config --cflags');
     print "ok\n";
