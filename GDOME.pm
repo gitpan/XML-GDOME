@@ -7,7 +7,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 use XML::LibXML::Common qw(:encoding :w3c);
 
-$VERSION = '0.85';
+$VERSION = '0.86';
 
 require DynaLoader;
 require Exporter;
@@ -416,7 +416,7 @@ sub appendTextNode {
 
 sub appendText {
   my ($node, $xmlString) = @_;
-  if ($xmlString) {
+  if ($xmlString != '') {
     my $text = $node->getOwnerDocument->createTextNode($xmlString);
     $node->appendChild($text);
   }

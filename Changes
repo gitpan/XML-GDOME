@@ -1,5 +1,8 @@
 Revision history for Perl extension XML::GDOME
 
+0.86  March 30th, 2004
+	- Fixed bug when calling appendText with value "0" (Marc Slagle)
+
 0.85  December 1st, 2003
 	- removed #include <libxml/hash.h> from GDOME.xs - workaround for libxml2 2.6.2
 		(Mike Castle)

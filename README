@@ -30,6 +30,10 @@ make
 make test
 make install
 
+NOTES
+
+If t/09_sax.t test 20 fails because of whitespace differences, probably nothing to worry about...
+
 COPYRIGHT AND LICENCE
 
 Copyright 2002 T.J. Mather.  
