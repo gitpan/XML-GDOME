@@ -11,7 +11,7 @@ my $el = $doc->documentElement;
 undef $doc;
 my @nodes = $el->getChildNodes;
 for  my $node (@nodes) {
-  if ($node->getNodeType == GDOME_ELEMENT_NODE) {
+  if ($node->getNodeType == ELEMENT_NODE) {
     my $nnm = $node->attributes;
   }
 }

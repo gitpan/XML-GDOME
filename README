@@ -1,4 +1,4 @@
-XML::GDOME version 0.76
+XML::GDOME version 0.77
 =======================
 
 REQUIREMENTS
@@ -9,6 +9,14 @@ checkout the files from CVS, run:
 $ export CVSROOT=':pserver:anonymous@anoncvs.gnome.org:/cvs/gnome'
 $ cvs login      # press 'return' for password
 $ cvs -z4 checkout gdome2
+$ ./autogen.sh
+$ ./configure
+$ make
+$ make check
+$ make install
+
+For gdome2 related questions, e-mail the gdome2 mailing list:
+http://mail.gnome.org/mailman/listinfo/gdome
 
 DESCRIPTION
 

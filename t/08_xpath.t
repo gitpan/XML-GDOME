@@ -27,7 +27,7 @@ ok($gnode, undef);
 my $nsresolv = $el->xpath_createNSResolver;
 
 $res = $doc->xpath_evaluate("//foo:bar/*", $nsresolv);
-ok ($res->resultType, GDOME_ORDERED_NODE_ITERATOR_TYPE);
+ok ($res->resultType, ORDERED_NODE_ITERATOR_TYPE);
 
 $gnode = $res->iterateNext;
 ok($gnode->tagName, "foo:a1");
@@ -36,20 +36,20 @@ $gnode = $res->iterateNext;
 ok($gnode->tagName, "foo:a2");
 
 $res = $doc->xpath_evaluate("count(//p)");
-ok ($res->resultType, GDOME_NUMBER_TYPE);
+ok ($res->resultType, NUMBER_TYPE);
 ok ($res->numberValue, 2);
 
 $res = $doc->xpath_evaluate("concat('abc','def')");
-ok ($res->resultType, GDOME_STRING_TYPE);
+ok ($res->resultType, STRING_TYPE);
 ok ($res->stringValue, "abcdef");
 
 $res = $doc->xpath_evaluate("true()");
-ok ($res->resultType, GDOME_BOOLEAN_TYPE);
+ok ($res->resultType, BOOLEAN_TYPE);
 ok ($res->booleanValue, 1);
 
 $res = $doc->xpath_evaluate("//namespace::*");
 $gnode = $res->iterateNext;
-ok ($gnode->nodeType, GDOME_XPATH_NAMESPACE_NODE);
+ok ($gnode->nodeType, XPATH_NAMESPACE_NODE);
 ok ($gnode->prefix, "foo");
 ok ($gnode->nodeName, "foo");
 ok ($gnode->namespaceURI, "http://foo.com/baz");

@@ -38,6 +38,7 @@ GdomeEvent *            G_OBJECT
 GdomeMutationEvent *    G_OBJECT
 
 INPUT
+G_NODELIST
 G_OBJECT
     if( sv_isobject($arg) && (SvTYPE(SvRV($arg)) == SVt_PVMG) )
             $var = ($type)SvIV((SV*)SvRV( $arg ));

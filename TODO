@@ -1,3 +1,7 @@
+Patches welcome!  Please e-mail tjmather@tjmather.com to coordinate.
+
+* Create a flag to set GDOME_* prefix for DOM constants (suggested by Ilya
+Sterin), see http://aspn.activestate.com/ASPN/Mail/Message/1062045
 * Add events module
 * Add traversal module
 * Clean up generate script
@@ -5,3 +9,4 @@
 * add full XML::LibXML compatibility
 * separate XML::GDOME::SAX* into new distribution, since
   XML::SAX shouldn't be required for DOM module.
+* Documentation improvements

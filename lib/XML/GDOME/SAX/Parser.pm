@@ -50,28 +50,28 @@ sub process_node {
     my ($self, $node) = @_;
     
     my $node_type = $node->getNodeType();
-    if ($node_type == GDOME_COMMENT_NODE) {
+    if ($node_type == COMMENT_NODE) {
         $self->comment( { Data => $node->getData } );
     }
-    elsif ($node_type == GDOME_TEXT_NODE || $node_type == GDOME_CDATA_SECTION_NODE) {
+    elsif ($node_type == TEXT_NODE || $node_type == CDATA_SECTION_NODE) {
         # warn($node->getData . "\n");
         $self->characters( { Data => $node->getData } );
     }
-    elsif ($node_type == GDOME_ELEMENT_NODE) {
+    elsif ($node_type == ELEMENT_NODE) {
         # warn("<" . $node->getName . ">\n");
         $self->process_element($node);
         # warn("</" . $node->getName . ">\n");
     }
-    elsif ($node_type == GDOME_ENTITY_REFERENCE_NODE) {
+    elsif ($node_type == ENTITY_REFERENCE_NODE) {
         foreach my $kid ($node->getChildNodes) {
             # warn("child of entity ref: " . $kid->getNodeType() . " called: " . $kid->getName . "\n");
             $self->process_node($kid);
         }
     }
-    elsif ($node_type == GDOME_DOCUMENT_NODE) {
+    elsif ($node_type == DOCUMENT_NODE) {
         # just get root element. Ignore other cruft.
         foreach my $kid ($node->getChildNodes) {
-            if ($kid->getNodeType() == GDOME_ELEMENT_NODE) {
+            if ($kid->getNodeType() == ELEMENT_NODE) {
                 $self->process_element($kid);
                 last;
             }

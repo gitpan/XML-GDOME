@@ -31,6 +31,7 @@
   $node     = $n->replaceChild($newChild,$oldChild);
   $bool     = $n->canAppend($newChild);
   $str      = $n->toString($mode);
+  @nodes    = $n->findnodes($xpath);
 
 =head1 METHODS
 
@@ -41,14 +42,14 @@
 
 
 
-I<Returns>: a NamedNodeMap containing the attributes of this node (if it is an Element) or undef otherwise.
+I<Returns>: a NamedNodeMap containing the attributes of this node (if it is an Element) or undef otherwise. In array context, returns array.
 
 
 =item $nodeList = $n->getChildNodes();
 
 
 
-I<Returns>: a NodeList that contains all children of this node. If there are no children, this is a NodeList containing no nodes.
+I<Returns>: a NodeList that contains all children of this node. If there are no children, this is a NodeList containing no nodes.  Note that attributes are not considered to be children of element nodes - use gdome_n_attributes to obtain the attributes. In array context, returns array.
 
 
 =item $node = $n->getFirstChild();
@@ -249,6 +250,20 @@ Tests if a I<newChild> can be added in the child list of this node.
 I<C<newChild>>: The Node Object ref of the node to test
 
 I<Returns>: 1 if I<newChild> can be added, 0 otherwise.
+
+
+=item $str = $n->toString($mode);
+
+This is the equivalent to XML::GDOME::Document::toString for a single node. This means a node and all its
+       childnodes will be dumped into the result string. There is no formating implemented yet, which may cause an
+       unreadable output. 
+
+I<Returns>: string representation of node and childnodes
+
+
+=item @nodes = $n->findnodes($xpath);
+
+findnodes performs the xpath statement on the current node and returns the result as an array.
 
 
 =back

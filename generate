@@ -64,6 +64,7 @@ extern "C" {
 #include "XSUB.h"
 
 #include <libxml/hash.h>
+#include <libxml/xmlerror.h>
 #include "gdome.h"
 #include "gdome-xpath.h"
 #include "gdome-traversal.h"
@@ -114,6 +115,25 @@ static SV * GDOMEPerl_read_cb = NULL;
 static SV * GDOMEPerl_open_cb = NULL;
 static SV * GDOMEPerl_close_cb = NULL;
 static SV * GDOMEPerl_error = NULL;
+
+/* Shamelessly cribbed straight from LibXML.xs */
+/* This handler function appends 
+   an error message to the GDOMEPerl_error global */
+void
+GDOMEPerl_error_handler(void * ctxt, const char * msg, ...) 
+{ 
+    va_list args; 
+    SV * sv; 
+     
+    sv = NEWSV(0,512); 
+     
+    va_start(args, msg); 
+    sv_vsetpvfn(sv, msg, strlen(msg), &args, NULL, 0, NULL); 
+    va_end(args); 
+     
+    sv_catsv(GDOMEPerl_error, sv); /* remember the last error */ 
+    SvREFCNT_dec(sv); 
+} 
 
 int 
 GDOMEPerl_input_match(char const * filename)
@@ -343,7 +363,7 @@ print PM q{package XML::GDOME;
 use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
-$VERSION = '0.76';
+$VERSION = '0.77';
 
 require DynaLoader;
 require Exporter;
@@ -378,6 +398,11 @@ parseDocs("$gdome_dir/libgdome/gdome-xpath.c");
 #parseDocs("$gdome_dir/libgdome/gdome-traversal.c");
 #parseDocs("$gdome_dir/libgdome/gdome-events.c");
 
+$docs->{Node}->{attributes}->{return} .= " In array context, returns array.";
+$docs->{Node}->{childNodes}->{return} .= " In array context, returns array.";
+$docs->{Element}->{getElementsByTagName}->{return} .= " In array context, returns array.";
+$docs->{Element}->{getElementsByTagNameNS}->{return} .= " In array context, returns array.";
+
 my $firstTime = 1;
 my @isa_strings;
 my %parent_class;
@@ -408,6 +433,8 @@ BOOT:
                               (xmlInputOpenCallback) GDOMEPerl_input_open,
                               (xmlInputReadCallback) GDOMEPerl_input_read,
                               (xmlInputCloseCallback) GDOMEPerl_input_close);
+    xmlSetGenericErrorFunc(PerlIO_stderr(),
+                           (xmlGenericErrorFunc)GDOMEPerl_error_handler);
 
 END
   $firstTime = 0;
@@ -569,13 +596,18 @@ END
   }
 
   for (@method) {
+    my $error_handling;
     my $return = $_->getAttribute("TYPE");
     my $method = $_->getAttribute("NAME");
     my $private;
-    if ($method eq 'notused') {
+    if ($method eq 'getElementsByTagName' ||
+        $method eq 'getElementsByTagNameNS' ) {
       $private = '_';
     } else {
       $private = '';
+    }
+    if ($method =~ m!^createDoc! && $class eq 'DOMImplementation') {
+      $error_handling = 1;
     }
     next if $method eq 'query_interface';
     next if $method =~ m!WithEntitiesTable$!;
@@ -663,7 +695,15 @@ END
     if ($exception) {
       print XS "        GdomeException exc;\n";
     }
+    if ($error_handling) {
+      print XS "        char * errstr;\n";
+      print XS "        STRLEN len = 0;\n";
+    }
     print XS "    CODE:\n";
+    if ($error_handling) {
+      print XS qq{        GDOMEPerl_error = NEWSV(0, 512);\n};
+      print XS qq{        sv_setpvn(GDOMEPerl_error, "", 0);\n};
+    }
     if ($return eq 'void') {
       print XS qq{        gdome_${prefix}_$method($arg_names$exception);\n};
       for (@strings) {
@@ -683,6 +723,16 @@ END
       for (@strings) {
         print XS "        if($_ != NULL)\n";
         print XS "          gdome_str_unref($_);\n";
+      }
+      if ($error_handling) {
+        print XS <<END;
+        sv_2mortal(GDOMEPerl_error);
+
+        errstr = SvPV(GDOMEPerl_error, len);
+        if (len > 0){
+          croak("%s",errstr);
+        }
+END
       }
       if ($exception) {
         print XS <<END;
@@ -709,12 +759,21 @@ END
 				    };
   } elsif($class eq 'Node') {
     $synopsis{"toString"} = q{$str = $n->toString($mode);};
-    $docs->{Document}->{toString} = {
+    $docs->{Node}->{toString} = {
 				     desc => "This is the equivalent to XML::GDOME::Document::toString for a single node. This means a node and all its
        childnodes will be dumped into the result string. There is no formating implemented yet, which may cause an
        unreadable output. ",
 				     return => "string representation of node and childnodes",
 				    };
+    $synopsis{"findnodes"} = q{@nodes = $n->findnodes($xpath);};
+    $docs->{Node}->{findnodes} = {
+                                     desc => "findnodes performs the xpath statement on the current node and returns the result as an array."
+                                  };
+  } elsif($class eq 'Element') {
+    $synopsis{"appendText"} = q{$elem->appendText($PCDATA);};
+    $docs->{Element}->{appendText} = {
+                                      desc => "This wrapper function lets you add a string directly to an element node."
+                                 };
   }
 
   unless ($class eq 'DOMImplementation') {
@@ -931,7 +990,7 @@ sub toString {
   return $di->saveDocToString($doc,$mode);
 }
 
-package XML::GDOME::Element;
+package XML::GDOME::Node;
 
 sub attributes {
   getAttributes(@_);
@@ -950,8 +1009,6 @@ sub getAttributes {
     return $nnm;
   }
 }
-
-package XML::GDOME::Node;
 
 sub xpath_evaluate {
   my ($contextNode, $expression, $resolver, $type) = @_;
@@ -976,6 +1033,26 @@ sub xpath_createNSResolver {
   return $XML::GDOME::XPath::xpeval->createNSResolver($node);
 }
 
+sub childNodes {
+  getChildNodes(@_);
+}
+
+sub getChildNodes {
+  my ($elem) = @_;
+  my $nl = $elem->_childNodes;
+  if (wantarray) {
+    my @nodes;
+    for my $i (0 .. $nl->getLength - 1) {
+      push @nodes, $nl->item("$i");
+    }
+    return @nodes;
+  } else {
+    return $nl;
+  }
+}
+
+package XML::GDOME::Element;
+
 sub appendTextNode {
   appendText(@_);
 }
@@ -987,13 +1064,53 @@ sub appendText {
   return;
 }
 
-sub childNodes {
-  getChildNodes(@_);
+sub getElementsByTagName {
+  my $elem = shift;
+  my $nl = $elem->_getElementsByTagName(@_);
+  if (wantarray) {
+    my @nodes;
+    for my $i (0 .. $nl->getLength - 1) {
+      push @nodes, $nl->item("$i");
+    }
+    return @nodes;
+  } else {
+    return $nl;
+  }
 }
 
-sub getChildNodes {
-  my ($elem) = @_;
-  my $nl = $elem->_childNodes;
+sub getElementsByTagNameNS {
+  my $elem = shift;
+  my $nl = $elem->_getElementsByTagNameNS(@_);
+  if (wantarray) {
+    my @nodes;
+    for my $i (0 .. $nl->getLength - 1) {
+      push @nodes, $nl->item("$i");
+    }
+    return @nodes;
+  } else {
+    return $nl;
+  }
+}
+
+package XML::GDOME::Document;
+
+sub getElementsByTagName {
+  my $elem = shift;
+  my $nl = $elem->_getElementsByTagName(@_);
+  if (wantarray) {
+    my @nodes;
+    for my $i (0 .. $nl->getLength - 1) {
+      push @nodes, $nl->item("$i");
+    }
+    return @nodes;
+  } else {
+    return $nl;
+  }
+}
+
+sub getElementsByTagNameNS {
+  my $elem = shift;
+  my $nl = $elem->_getElementsByTagNameNS(@_);
   if (wantarray) {
     my @nodes;
     for my $i (0 .. $nl->getLength - 1) {
@@ -1142,8 +1259,18 @@ sub parseHeader {
   my $file = shift;
   open HEADER, "$file";
   while (<HEADER>) {
-    if (m!(GDOME_[A-Z_]*) = (\d+)!) {
-      $constants{$1} = $2;
+    if (my ($k, $v) = m!(GDOME_[A-Z_]*) = (\d+)!) {
+      if ($k =~ m!_NODE$! ||
+          $k =~ m!_ERR$! ||
+          $k =~ m!_TYPE$!) {
+        unless ($k eq 'GDOME_NOEXCEPTION_ERR' ||
+                $k eq 'GDOME_NULL_POINTER_ERR' ||
+                $k eq 'GDOME_READONLY_NODE' ||
+                $k eq 'GDOME_READWRITE_NODE' ) {
+          $k =~ s!GDOME_!!g;
+        }
+      }
+      $constants{$k} = $v;
     }
   }
   close HEADER;

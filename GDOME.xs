@@ -285,24 +285,24 @@ GDOMEPerl_input_close(void * context)
 void
 GDOMEPerl_load_error_strings() {
   errorMsg[0] = "GDOME_NOEXCEPTION_ERR";
-  errorMsg[1] = "GDOME_INDEX_SIZE_ERR";
-  errorMsg[2] = "GDOME_DOMSTRING_SIZE_ERR";
-  errorMsg[3] = "GDOME_HIERARCHY_REQUEST_ERR";
-  errorMsg[4] = "GDOME_WRONG_DOCUMENT_ERR";
-  errorMsg[5] = "GDOME_INVALID_CHARACTER_ERR";
-  errorMsg[6] = "GDOME_NO_DATA_ALLOWED_ERR";
-  errorMsg[7] = "GDOME_NO_MODIFICATION_ALLOWED_ERR";
-  errorMsg[8] = "GDOME_NOT_FOUND_ERR";
-  errorMsg[9] = "GDOME_NOT_SUPPORTED_ERR";
-  errorMsg[10] = "GDOME_INUSE_ATTRIBUTE_ERR";
-  errorMsg[11] = "GDOME_INVALID_STATE_ERR";
-  errorMsg[12] = "GDOME_SYNTAX_ERR";
-  errorMsg[13] = "GDOME_INVALID_MODIFICATION_ERR";
-  errorMsg[14] = "GDOME_NAMESPACE_ERR";
-  errorMsg[15] = "GDOME_INVALID_ACCESS_ERR";
+  errorMsg[1] = "INDEX_SIZE_ERR";
+  errorMsg[2] = "DOMSTRING_SIZE_ERR";
+  errorMsg[3] = "HIERARCHY_REQUEST_ERR";
+  errorMsg[4] = "WRONG_DOCUMENT_ERR";
+  errorMsg[5] = "INVALID_CHARACTER_ERR";
+  errorMsg[6] = "NO_DATA_ALLOWED_ERR";
+  errorMsg[7] = "NO_MODIFICATION_ALLOWED_ERR";
+  errorMsg[8] = "NOT_FOUND_ERR";
+  errorMsg[9] = "NOT_SUPPORTED_ERR";
+  errorMsg[10] = "INUSE_ATTRIBUTE_ERR";
+  errorMsg[11] = "INVALID_STATE_ERR";
+  errorMsg[12] = "SYNTAX_ERR";
+  errorMsg[13] = "INVALID_MODIFICATION_ERR";
+  errorMsg[14] = "NAMESPACE_ERR";
+  errorMsg[15] = "INVALID_ACCESS_ERR";
   errorMsg[100] = "GDOME_NULL_POINTER_ERR";
-  errorMsg[101] = "GDOME_INVALID_EXPRESSION_ERR";
-  errorMsg[102] = "GDOME_TYPE_ERR";
+  errorMsg[101] = "INVALID_EXPRESSION_ERR";
+  errorMsg[102] = "TYPE_ERR";
 }
 
 MODULE = XML::GDOME       PACKAGE = XML::GDOME::DOMImplementation
@@ -316,6 +316,8 @@ BOOT:
                               (xmlInputOpenCallback) GDOMEPerl_input_open,
                               (xmlInputReadCallback) GDOMEPerl_input_read,
                               (xmlInputCloseCallback) GDOMEPerl_input_close);
+    xmlSetGenericErrorFunc(PerlIO_stderr(),
+                           (xmlGenericErrorFunc)GDOMEPerl_error_handler);
 
 GdomeDOMImplementation *
 mkref()
@@ -364,25 +366,17 @@ createDocument(self,namespaceURI,qualifiedName,doctype)
     CODE:
         GDOMEPerl_error = NEWSV(0, 512);
         sv_setpvn(GDOMEPerl_error, "", 0);
-
-        xmlSetGenericErrorFunc( NULL ,  
-				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
-        
         RETVAL = gdome_di_createDocument(self,namespaceURI,qualifiedName,doctype,&exc);
-
-        xmlSetGenericErrorFunc( NULL , NULL);
-        
-        sv_2mortal(GDOMEPerl_error);
-
-        errstr = SvPV(GDOMEPerl_error, len);
-        if (len > 0){
-	  croak("%s",errstr);
-	}
-
         if(namespaceURI != NULL)
           gdome_str_unref(namespaceURI);
         if(qualifiedName != NULL)
           gdome_str_unref(qualifiedName);
+        sv_2mortal(GDOMEPerl_error);
+
+        errstr = SvPV(GDOMEPerl_error, len);
+        if (len > 0){
+          croak("%s",errstr);
+        }
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -403,27 +397,19 @@ createDocumentType(self,qualifiedName,publicId,systemId)
     CODE:
         GDOMEPerl_error = NEWSV(0, 512);
         sv_setpvn(GDOMEPerl_error, "", 0);
-
-        xmlSetGenericErrorFunc( NULL ,  
-				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
-        
         RETVAL = gdome_di_createDocumentType(self,qualifiedName,publicId,systemId,&exc);
-
-        xmlSetGenericErrorFunc( NULL , NULL);
-        
-        sv_2mortal(GDOMEPerl_error);
-
-        errstr = SvPV(GDOMEPerl_error, len);
-        if (len > 0){
-	  croak("%s",errstr);
-	}
-
         if(qualifiedName != NULL)
           gdome_str_unref(qualifiedName);
         if(publicId != NULL)
           gdome_str_unref(publicId);
         if(systemId != NULL)
           gdome_str_unref(systemId);
+        sv_2mortal(GDOMEPerl_error);
+
+        errstr = SvPV(GDOMEPerl_error, len);
+        if (len > 0){
+          croak("%s",errstr);
+        }
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -474,21 +460,13 @@ createDocFromURI(self,uri,mode)
     CODE:
         GDOMEPerl_error = NEWSV(0, 512);
         sv_setpvn(GDOMEPerl_error, "", 0);
-
-        xmlSetGenericErrorFunc( NULL ,  
-				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
-        
         RETVAL = gdome_di_createDocFromURI(self,uri,mode,&exc);
-
-        xmlSetGenericErrorFunc( NULL , NULL);
-        
         sv_2mortal(GDOMEPerl_error);
 
         errstr = SvPV(GDOMEPerl_error, len);
         if (len > 0){
-	  croak("%s",errstr);
-	}
-  
+          croak("%s",errstr);
+        }
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -508,21 +486,13 @@ createDocFromMemory(self,str,mode)
     CODE:
         GDOMEPerl_error = NEWSV(0, 512);
         sv_setpvn(GDOMEPerl_error, "", 0);
-
-        xmlSetGenericErrorFunc( NULL ,  
-				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
-        
         RETVAL = gdome_di_createDocFromMemory(self,str,mode,&exc);
-
-        xmlSetGenericErrorFunc( NULL , NULL);
-        
         sv_2mortal(GDOMEPerl_error);
 
         errstr = SvPV(GDOMEPerl_error, len);
         if (len > 0){
-	  croak("%s",errstr);
-	}
-  
+          croak("%s",errstr);
+        }
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1331,7 +1301,7 @@ getElementById(self,elementId)
         RETVAL
 
 GdomeNodeList *
-getElementsByTagName(self,tagname)
+_getElementsByTagName(self,tagname)
         GdomeDocument * self
         GdomeDOMString * tagname
     PREINIT:
@@ -1348,7 +1318,7 @@ getElementsByTagName(self,tagname)
         RETVAL
 
 GdomeNodeList *
-getElementsByTagNameNS(self,namespaceURI,localName)
+_getElementsByTagNameNS(self,namespaceURI,localName)
         GdomeDocument * self
         GdomeDOMString * namespaceURI
         GdomeDOMString * localName
@@ -1701,7 +1671,7 @@ getAttributeNodeNS(self,namespaceURI,localName)
         RETVAL
 
 GdomeNodeList *
-getElementsByTagName(self,name)
+_getElementsByTagName(self,name)
         GdomeElement * self
         GdomeDOMString * name
     PREINIT:
@@ -1718,7 +1688,7 @@ getElementsByTagName(self,name)
         RETVAL
 
 GdomeNodeList *
-getElementsByTagNameNS(self,namespaceURI,localName)
+_getElementsByTagNameNS(self,namespaceURI,localName)
         GdomeElement * self
         GdomeDOMString * namespaceURI
         GdomeDOMString * localName

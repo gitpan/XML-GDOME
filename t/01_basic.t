@@ -34,7 +34,7 @@ ok($output, $output2);
 eval {
   $doc = XML::GDOME->createDocument("asdf:asdf", "TEST", undef);
 };
-ok($@ =~ m!GDOME_NAMESPACE_ERR!);
+ok($@ =~ m!NAMESPACE_ERR!);
 
 # test we throw an error on parsing erroneous stuff
 # Unknown entity

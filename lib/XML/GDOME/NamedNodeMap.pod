@@ -90,13 +90,13 @@ I<C<arg>>: a node to store in this map.
 
 I<Returns>: if the new Node replaces an existing node, the replaced Node is returned, otherwise undef is returned.
 
-C<GDOME NO_MODIFICATION_ALLOWED_ERR>: Raised if this map is readonly.
-
 C<GDOME_HIERARCHY_REQUEST_ERR>: Raised if an attempt is made to add a node doesn't belong in this NamedNodeMap. Examples would include trying to insert something other than an Attr node into an Element's map of attributes, or a non-Entity node into the DocumentType's map of Entities.
+
+C<GDOME_INUSE_ATTRIBUTE_ERR>: Raised if arg is an Attr that is already an attribute of another Element object. The DOM user must explicitly clone Attr nodes to re-use them in other elements.
 
 C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<arg> was created from a different document than the one that created this map.
 
-C<GDOME INUSE_ATTRIBUTE_ERR>: Raised if arg is an Attr that is already an attribute of another Element object. The DOM user must explicitly clone Attr nodes to re-use them in other elements.
+C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this map is readonly.
 
 
 =item $node = $nnm->setNamedItemNS($arg);

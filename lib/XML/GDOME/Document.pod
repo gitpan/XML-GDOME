@@ -165,7 +165,7 @@ I<Returns>: the Element whose %ID is given by I<elementId>. If no such element e
 
 
 
-I<C<tagName>>: The name of the tag to match on. The special value %"*" matches           all tags.
+I<C<tagName>>: The name of the tag to match on. The special value * matches           all tags.
 
 I<Returns>: a NodeList of all the elements with a given tag name in the order in which they are encountered in a preorder traversal of the Document tree.
 
@@ -174,9 +174,9 @@ I<Returns>: a NodeList of all the elements with a given tag name in the order in
 
 
 
-I<C<namespaceURI>>: The namespace URI of the elements to match on. The special                value %"*" matches all namespaces.
+I<C<namespaceURI>>: The namespace URI of the elements to match on. The special                value * matches all namespaces.
 
-I<C<localName>>: The local name of the elements to match on. The special value             %"*" matches all local names.
+I<C<localName>>: The local name of the elements to match on. The special value             * matches all local names.
 
 I<Returns>: a NodeList of all the descendant elements with a given local name and namespace URI in the order in which they are encountered in a preorder traversal of this Document tree.
 

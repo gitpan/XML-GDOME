@@ -35,7 +35,7 @@ ok($node2->nodeName,"tns:NODE2");
 my $tnode = $node1->firstChild;
 ok($tnode->nodeName,"#text");
 
-ok($node2->nodeType, GDOME_ELEMENT_NODE);
+ok($node2->nodeType, ELEMENT_NODE);
 
 $tnode = $node2->firstChild;
 ok($tnode->nodeValue, "This is a node with a namespace");

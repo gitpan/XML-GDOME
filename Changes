@@ -1,5 +1,11 @@
 Revision history for Perl extension XML::GDOME
 
+0.77  March 22nd, 2002
+	- API CHANGE: Removed GDOME_ prefix from GDOME constants.
+	- getElemenetsByTagName(NS)? now returns array if wantarray is set
+	- more doc improvements.
+	- Moved validation throwing exception fix to generate script.
+
 0.76  March 5th, 2002
 	- Updated to use lastest version of gdome2 from CVS
 	    API CHANGE: XPath now follows DOM Level 3 XPath
