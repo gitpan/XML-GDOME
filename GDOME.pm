@@ -5,7 +5,7 @@ package XML::GDOME;
 use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
-$VERSION = '0.78';
+$VERSION = '0.79';
 
 require DynaLoader;
 require Exporter;
@@ -229,6 +229,7 @@ sub getAttributes {
   my ($elem) = @_;
   my $nnm = $elem->_attributes;
   if (wantarray) {
+    return () if !$nnm;
     my @attrs;
     for my $i (0 .. $nnm->getLength - 1) {
       push @attrs, $nnm->item("$i");
@@ -270,6 +271,7 @@ sub getChildNodes {
   my ($elem) = @_;
   my $nl = $elem->_childNodes;
   if (wantarray) {
+    return () if !$nl;
     my @nodes;
     for my $i (0 .. $nl->getLength - 1) {
       push @nodes, $nl->item("$i");
@@ -292,6 +294,122 @@ sub iterator {
   return $rv;
 }
 
+sub getAttributesNS {
+  my ($self, $nsuri) = @_;
+  my @attr;
+  for my $attr ($self->getAttributes()) {
+    push @attr, $attr if $attr->getNamespaceURI() eq $nsuri;
+  }
+  return @attr;
+}
+
+sub findvalue {
+  my $res = xpath_evaluate(@_);
+
+  my $val = '';
+  while (my $node = $res->iterateNext) {
+    $val .= $node->to_literal;
+  }
+  return $val;
+}
+
+sub find {
+  my $res = xpath_evaluate(@_);
+
+  my $type = $res->resultType;
+  if ($type == XML::GDOME::UNORDERED_NODE_ITERATOR_TYPE ||
+      $type == XML::GDOME::ORDERED_NODE_ITERATOR_TYPE) {
+    my @nodes;
+    while (my $node = $res->iterateNext) {
+      push @nodes, $node;
+    }
+    return @nodes;
+  }
+  elsif ($type == XML::GDOME::NUMBER_TYPE()) {
+    return $res->numberValue;
+  }
+  elsif ($type == XML::GDOME::STRING_TYPE()) {
+    return $res->stringValue;
+  }
+  elsif ($type == XML::GDOME::BOOLEAN_TYPE()) {
+    return $res->booleanValue;
+  }
+  else {
+    croak("Unknown result type");
+  }
+}
+
+sub insertAfter {
+  my ($parent, $newChild, $refChild) = @_;
+
+  if (!$refChild) {
+    return $parent->appendChild($newChild);
+  }
+  my $nextChild = $refChild->getNextSibling();
+  if ($nextChild) {
+    $parent->insertBefore($newChild, $nextChild);
+  } else {
+    $parent->appendChild($newChild);
+  }
+}
+
+sub getChildrenByTagName {
+  my ($self, $tagname) = @_;
+  my @nodes;
+  for my $node ($self->getChildNodes()) {
+    if ($node->getNodeName() eq $tagname) {
+      push @nodes, $node;
+    }
+  }
+  return @nodes;
+}
+
+sub getChildrenByTagNameNS {
+  my ($self, $nsURI, $tagname) = @_;
+  my @nodes;
+  for my $node ($self->getChildNodes()) {
+    if ($node->getLocalName() eq $tagname &&
+      $node->getNamespaceURI eq $nsURI) {
+      push @nodes, $node;
+    }
+  }
+  return @nodes;
+}
+
+sub getElementsByLocalName {
+  my ($self, $localname) = @_;
+  # FIXME must fetch all descendants of node with local name
+  my @elem;
+  for my $elem ($self->getChildNodes()) {
+    push @elem, $elem if $elem->getLocalName() eq $localname;
+  }
+  return @elem;
+}
+
+sub getName {
+  getNodeName(@_);
+}
+
+sub getData {
+  getNodeValue(@_);
+}
+
+sub getType {
+  getNodeType(@_);
+}
+
+sub getOwner {
+  getOwnerDocument(@_);
+}
+
+sub getChildnodes {
+  getChildNodes(@_);
+}
+
+sub localname {
+  getLocalName(@_);
+}
+
 package XML::GDOME::Element;
 
 sub appendTextNode {
@@ -309,6 +427,7 @@ sub getElementsByTagName {
   my $elem = shift;
   my $nl = $elem->_getElementsByTagName(@_);
   if (wantarray) {
+    return () if !$nl;
     my @nodes;
     for my $i (0 .. $nl->getLength - 1) {
       push @nodes, $nl->item("$i");
@@ -323,6 +442,7 @@ sub getElementsByTagNameNS {
   my $elem = shift;
   my $nl = $elem->_getElementsByTagNameNS(@_);
   if (wantarray) {
+    return () if !$nl;
     my @nodes;
     for my $i (0 .. $nl->getLength - 1) {
       push @nodes, $nl->item("$i");
@@ -330,6 +450,24 @@ sub getElementsByTagNameNS {
     return @nodes;
   } else {
     return $nl;
+  }
+}
+
+sub appendTextChild {
+  my ($node, $tagName, $xmlString) = @_;
+  my $dom = $node->getOwnerDocument();
+  my $child = $node->appendChild($dom->createElement($tagName));
+  return $child->appendChild($dom->createTextNode($xmlString));
+  return $child;
+}
+
+sub appendWellBalancedChunk {
+  my ($self, $chunk) = @_;
+  my $dom0 = $self->getOwnerDocument();
+  my $dom1 = XML::GDOME->createDocFromString("<gdome>".$chunk."</gdome>");
+  for my $child ($dom1->getDocumentElement()->getChildNodes()) {
+    my $copy = $dom0->importNode($child, 1);
+    $self->appendChild($copy);
   }
 }
 
@@ -339,6 +477,7 @@ sub getElementsByTagName {
   my $elem = shift;
   my $nl = $elem->_getElementsByTagName(@_);
   if (wantarray) {
+    return () if !$nl;
     my @nodes;
     for my $i (0 .. $nl->getLength - 1) {
       push @nodes, $nl->item("$i");
@@ -353,6 +492,7 @@ sub getElementsByTagNameNS {
   my $elem = shift;
   my $nl = $elem->_getElementsByTagNameNS(@_);
   if (wantarray) {
+    return () if !$nl;
     my @nodes;
     for my $i (0 .. $nl->getLength - 1) {
       push @nodes, $nl->item("$i");
@@ -361,6 +501,19 @@ sub getElementsByTagNameNS {
   } else {
     return $nl;
   }
+}
+
+sub createAttribute {
+  my ($elem, $name, $value) = @_;
+  my $attr = $elem->_createAttribute($name);
+  if ($value) {
+    $attr->setValue($value);
+  }
+  return $attr;
+}
+
+sub createPI {
+  createProcessingInstruction(@_);
 }
 
 1;

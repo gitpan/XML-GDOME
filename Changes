@@ -1,5 +1,17 @@
 Revision history for Perl extension XML::GDOME
 
+0.79  April 25th, 2002
+	- Added XML::LibXML methods including getAttributeNS,
+	  findvalue, find, insertAfter, getChildrenByTagName,
+	  getChildrenByTagNameNS, getElementsByLocalName,
+	  appendTextChild, appendWellBalancedChunk,
+	  createAttribute, to_literal and several aliases (Richard Titmuss)
+	- Fixed getElementsByTagName when return empty list
+	  in array context (Richard Titmuss)
+	- Fixed bugs in XML::GDOME::SAX::Generator (Richard Titmuss)
+	- Added README.LibXML, includes notes on LibXML/GDOME compatability
+	  (Richard Titmuss)
+
 0.78  April 16th, 2002
 	- Removed #include <gdome-traversal.h> from GDOME.xs.
 	- Added iterator method (Richard Titmuss)

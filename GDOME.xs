@@ -581,6 +581,28 @@ toString( self )
     OUTPUT:
         RETVAL
 
+char *
+string_value ( self )
+	GdomeNode * self
+    ALIAS:
+        to_literal = 1
+    PREINIT:
+	Gdome_xml_Node *priv;
+	char *ret = NULL;
+    CODE:
+	priv = (Gdome_xml_Node *)self;
+	ret = (char *)xmlXPathCastNodeToString(priv->n);
+
+        if ( priv->n->doc != NULL ) {
+            xmlChar *retDecoded = domDecodeString( priv->n->doc->encoding, ret );
+            xmlFree( ret );
+            RETVAL = retDecoded;
+        } else {
+            RETVAL = ret;
+        }
+    OUTPUT:
+        RETVAL
+
 GdomeNamedNodeMap *
 _attributes(self)
         GdomeNode * self
@@ -1108,7 +1130,7 @@ implementation(self)
         RETVAL
 
 GdomeAttr *
-createAttribute(self,name)
+_createAttribute(self,name)
         GdomeDocument * self
         GdomeDOMString * name
     PREINIT:

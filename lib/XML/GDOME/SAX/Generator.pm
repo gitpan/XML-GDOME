@@ -31,28 +31,28 @@ sub process_node {
     my ($handler, $node) = @_;
     
     my $node_type = $node->getType();
-    if ($node_type == XML_COMMENT_NODE) {
+    if ($node_type == COMMENT_NODE) {
         $handler->comment( { Data => $node->getData } );
     }
-    elsif ($node_type == XML_TEXT_NODE || $node_type == XML_CDATA_SECTION_NODE) {
+    elsif ($node_type == TEXT_NODE || $node_type == CDATA_SECTION_NODE) {
         # warn($node->getData . "\n");
         $handler->characters( { Data => $node->getData } );
     }
-    elsif ($node_type == XML_ELEMENT_NODE) {
+    elsif ($node_type == ELEMENT_NODE) {
         # warn("<" . $node->getName . ">\n");
         process_element($handler, $node);
         # warn("</" . $node->getName . ">\n");
     }
-    elsif ($node_type == XML_ENTITY_REF_NODE) {
+    elsif ($node_type == ENTITY_REFERENCE_NODE) {
         foreach my $kid ($node->getChildNodes) {
             # warn("child of entity ref: " . $kid->getType() . " called: " . $kid->getName . "\n");
             process_node($handler, $kid);
         }
     }
-    elsif ($node_type == XML_DOCUMENT_NODE) {
+    elsif ($node_type == DOCUMENT_NODE) {
         # just get root element. Ignore other cruft.
         foreach my $kid ($node->getChildNodes) {
-            if ($kid->getType() == XML_ELEMENT_NODE) {
+            if ($kid->getType() == ELEMENT_NODE) {
                 process_element($handler, $kid);
                 last;
             }
