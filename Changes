@@ -1,5 +1,10 @@
 Revision history for Perl extension XML::GDOME
 
+0.83  July 31st, 2003
+	- Added CLONE method in increment reference count - first stage of
+	  support for threading (Stephen Clouse)
+	- Adapted 01_basic.t to accept new libxml2 error message (Stephen Clouse)
+
 0.82  September 15th, 2002
         - Require XML::LibXML::Common for rountines and constants
           shared with XML::LibXML, removed duplicate

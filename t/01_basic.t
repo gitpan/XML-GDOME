@@ -55,7 +55,7 @@ ok($@ =~ m!Entity 'bar' not defined!);
 eval { 
   $doc = XML::GDOME->createDocFromString(qq{<a><bar></a>});
 };
-ok($@ =~ m!Opening and ending tag mismatch: bar and a!);
+ok($@ =~ m!Opening and ending tag mismatch: bar.*and a!);
 
 # And from a file...
 eval { 
