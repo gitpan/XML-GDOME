@@ -1,5 +1,8 @@
 Revision history for Perl extension XML::GDOME
 
+0.81  June 5th, 2002
+	- Added toStringEnc method, supports encoding
+
 0.80  May 7th, 2002
 	- Fixed appendText for when $xmlString is undef
 	  (Richard Titmuss)

@@ -44,7 +44,8 @@ a remote URL.
 Creates a new xml document.  It will be in the $nsURI namespace, if
 $nsURI is defined, and its document element will have the name $name.
 
-$dtd is optional, and should be a XML::GDOME::DocumentType object.
+$dtd is optional, and should be a XML::GDOME::DocumentType object, or
+C<undef>.
 
 =item $dtd = XML::GDOME->createDocumentType( $name, $publicId, $systemId );
 

@@ -515,6 +515,23 @@ saveDocToFile(self,doc,filename,mode)
     OUTPUT:
         RETVAL
 
+GdomeBoolean
+saveDocToFileEnc(self,doc,filename,encoding,mode)
+        GdomeDOMImplementation * self
+        GdomeDocument * doc
+        const char * filename
+        const char * encoding
+        GdomeSavingCode mode
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_di_saveDocToFileEnc(self,doc,filename,encoding,mode,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
 char *
 saveDocToString(self,doc,mode)
         GdomeDOMImplementation * self
@@ -525,6 +542,23 @@ saveDocToString(self,doc,mode)
         GdomeException exc;
     CODE:
         if ( gdome_di_saveDocToMemory(self,doc,mem,mode,&exc) ) {
+          RETVAL = *mem;
+          free(mem);
+        }
+    OUTPUT:
+        RETVAL
+
+char *
+saveDocToStringEnc(self,doc,encoding,mode)
+        GdomeDOMImplementation * self
+        GdomeDocument * doc
+        const char * encoding
+        GdomeSavingCode mode
+    PREINIT:
+        char ** mem = malloc(sizeof(char *));
+        GdomeException exc;
+    CODE:
+        if ( gdome_di_saveDocToMemoryEnc(self,doc,mem,encoding,mode,&exc) ) {
           RETVAL = *mem;
           free(mem);
         }

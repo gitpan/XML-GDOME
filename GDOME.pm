@@ -5,7 +5,7 @@ package XML::GDOME;
 use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
-$VERSION = '0.80';
+$VERSION = '0.81';
 
 require DynaLoader;
 require Exporter;
@@ -217,6 +217,13 @@ sub toString {
   my $doc = shift;
   my $mode = shift || 0;
   return $di->saveDocToString($doc,$mode);
+}
+
+sub toStringEnc {
+  my $doc = shift;
+  my $encoding = shift;
+  my $mode = shift || 0;
+  return $di->saveDocToStringEnc($doc,$encoding,$mode);
 }
 
 package XML::GDOME::Node;

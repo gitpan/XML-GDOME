@@ -1,5 +1,5 @@
 use Test;
-BEGIN { plan tests => 8 }
+BEGIN { plan tests => 9 }
 END { ok(0) unless $loaded }
 use XML::GDOME;
 $loaded = 1;
@@ -26,9 +26,16 @@ ok($output, qq{<?xml version="1.0"?>
 <TEST PACKAGE="gdome2"><RELEASE>0.6.x</RELEASE></TEST>
 });
 
+my $output8859 = qq{<?xml version="1.0" encoding="ISO-8859-1"?>
+<TEST PACKAGE="gdome2"><RELEASE>0.6.x</RELEASE></TEST>
+};
+
 my $doc2 = XML::GDOME->createDocFromString($output);
 my $output2 = $doc2->toString(GDOME_SAVE_STANDARD);
 ok($output, $output2);
+
+my $output3 = $doc2->toStringEnc("ISO-8859-1",GDOME_SAVE_STANDARD);
+ok($output3, $output8859);
 
 # test exception handing
 eval {

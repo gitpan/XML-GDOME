@@ -363,7 +363,7 @@ print PM q{package XML::GDOME;
 use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
-$VERSION = '0.80';
+$VERSION = '0.81';
 
 require DynaLoader;
 require Exporter;
@@ -657,6 +657,28 @@ saveDocToString(self,doc,mode)
 END
       next;
     }
+    if ($method eq 'saveDocToMemoryEnc') {
+      print XS <<END;
+char *
+saveDocToStringEnc(self,doc,encoding,mode)
+        GdomeDOMImplementation * self
+        GdomeDocument * doc
+        const char * encoding
+        GdomeSavingCode mode
+    PREINIT:
+        char ** mem = malloc(sizeof(char *));
+        GdomeException exc;
+    CODE:
+        if ( gdome_di_saveDocToMemoryEnc(self,doc,mem,encoding,mode,&exc) ) {
+          RETVAL = *mem;
+          free(mem);
+        }
+    OUTPUT:
+        RETVAL
+
+END
+      next;
+    }
     my $raw = $_->getAttribute("RAW");
     my @param = $_->getElementsByTagName("PARAM");
     my @args = ();
@@ -779,6 +801,15 @@ END
 					      mode => "the indentation mode wanted, either GDOME_SAVE_STANDARD or GDOME_SAVE_LIBXML_INDENT"
 					     },
 				     return => "string representation of DOM tree",
+				    };
+    $synopsis{"toStringEnc"} = q{$str = $doc->toStringEnc($encoding,$mode);};
+    $docs->{Document}->{toString} = {
+				     desc => "Save the DOM tree of the Document to a string",
+				     vars => {
+					      encoding => "character encoding to use when generating XML text",
+					      mode => "the indentation mode wanted, either GDOME_SAVE_STANDARD or GDOME_SAVE_LIBXML_INDENT"
+					     },
+				     return => "string representation of DOM tree using the specified character encoding standard",
 				    };
   } elsif($class eq 'Node') {
     $synopsis{"toString"} = q{$str = $n->toString($mode);};
@@ -1023,6 +1054,13 @@ sub toString {
   my $doc = shift;
   my $mode = shift || 0;
   return $di->saveDocToString($doc,$mode);
+}
+
+sub toStringEnc {
+  my $doc = shift;
+  my $encoding = shift;
+  my $mode = shift || 0;
+  return $di->saveDocToStringEnc($doc,$encoding,$mode);
 }
 
 package XML::GDOME::Node;

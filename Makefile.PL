@@ -17,7 +17,7 @@ eval {
     print "running gdome-config... ";
     my $ver = backtick('gdome-config --version');
     my ($major, $minor, $point) = $ver =~ /(\d+).(\d+)\.(\d+)/g;
-    die "VERSION" unless $major == 0 && $minor == 7 && $point == 1;
+    die "VERSION" unless $major == 0 && $minor == 7 && $point == 2;
     $config{LIBS} ||= backtick('gdome-config --libs');
     $config{INC} ||= backtick('gdome-config --cflags');
     print "ok\n";
@@ -25,7 +25,7 @@ eval {
 if ($@) {
     print "failed\n";
     if ($@ =~ /^VERSION/) {
-        die "XML::GDOME needs gdome2 version 0.7.1 or higher - see README for details\n";
+        die "XML::GDOME needs gdome2 version 0.7.2 or higher - see README for details\n";
     }
     warn "*** ", $@ if $DEBUG;
     warn "using fallback values for LIBS and INC\n";

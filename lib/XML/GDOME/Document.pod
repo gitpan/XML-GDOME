@@ -22,6 +22,7 @@
   $nodeList = $doc->getElementsByTagNameNS($namespaceURI,$localName);
   $node     = $doc->importNode($importedNode,$deep);
   $str      = $doc->toString($mode);
+  $str      = $doc->toStringEnc($encoding,$mode);
 
 =head1 CLASS INHERITANCE
 
@@ -200,7 +201,9 @@ Save the DOM tree of the Document to a string
 
 I<C<mode>>: the indentation mode wanted, either GDOME_SAVE_STANDARD or GDOME_SAVE_LIBXML_INDENT
 
-I<Returns>: string representation of DOM tree
+I<C<encoding>>: character encoding to use when generating XML text
+
+I<Returns>: string representation of DOM tree using the specified character encoding standard
 
 
 =back
