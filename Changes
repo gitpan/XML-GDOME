@@ -1,4 +1,23 @@
-Revision history for Perl extension XML::GDOME.
+Revision history for Perl extension XML::GDOME
+
+0.76  March 5th, 2002
+	- Updated to use lastest version of gdome2 from CVS
+	    API CHANGE: XPath now follows DOM Level 3 XPath
+	    08 February 2002 Working Draft.
+	- Validation now throws exceptions instead of printing
+           to stderr (Martin Oldfield)
+	- Documentation fixes and improvements
+	- Bug fix - doc nodes returned by getParentNode are now
+	    blessed as "XML::GDOME::Document"
+
+0.75  February 16th, 2002
+	- Memory leak fixes in XS wrapper and gdome2 library.
+	    All tests should run without any memory leaks.
+	- Added XPath module
+	- Improved Documentation
+	- Added SAX Interface
+	- Added XML::LibXML compabitilty
+	- Added XML::GDOME::Node::toString
 
 0.7.0 December 23, 2001
 	- original version; created by h2xs 1.21 with options

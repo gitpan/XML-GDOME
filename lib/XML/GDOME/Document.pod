@@ -56,11 +56,11 @@ I<Returns>: the DOMImplementation object that handles this document.
 
 =item $attr = $doc->createAttribute($name);
 
-Creates an Attr of the given @name. Note that the Attr instance can then be set on an Element using the setAttributeNode method. To create an attribute with a qualified name and namespace URI, use the gdome_doc_createAttributeNS() method.
+Creates an Attr of the given I<name>. Note that the Attr instance can then be set on an Element using the setAttributeNode method. To create an attribute with a qualified name and namespace URI, use the gdome_doc_createAttributeNS() method.
 
 I<C<name>>: The name of the attribute
 
-I<Returns>: a new Attr object with the nodeName attribute set to @name, and localName, prefix, and namespaceURI set to undef. The value of the attribute is the empty string.
+I<Returns>: a new Attr object with the nodeName attribute set to I<name>, and localName, prefix, and namespaceURI set to undef. The value of the attribute is the empty string.
 
 
 =item $attr = $doc->createAttributeNS($namespaceURI,$qualifiedName);
@@ -71,7 +71,7 @@ I<C<namespaceURI>>: The namespace URI of the attribute to create
 
 I<C<qualifiedName>>: The qualified name of the attribute to create
 
-I<Returns>: a new Attr object with the following attributes: %Node.nodeName = @qualifiedName, %Node.namespaceURI = @namespaceURI, %Node.prefix = prefix, extracted from @qualifiedName, %Node.localName = localName, extracted from @qualifiedName, %Attr.name = @qualifiedName, %Node.nodeValue = the empty string.
+I<Returns>: a new Attr object with the following attributes: %Node.nodeName = I<qualifiedName>, %Node.namespaceURI = I<namespaceURI>, %Node.prefix = prefix, extracted from I<qualifiedName>, %Node.localName = localName, extracted from I<qualifiedName>, %Attr.name = I<qualifiedName>, %Node.nodeValue = the empty string.
 
 C<GDOME_NAMESPACE_ERR>: Raised if the I<qualifiedName> is malformed, if the I<qualifiedName> has a prefix and the I<namespaceURI> is %NUKK, if the I<qualifiedName> has a prefix that is "xml" and the I<namespaceURI> is different from "http://www.w3.org/XML/1998/namespace", or if the I<qualifiedName> is "xmlns" and the I<namespaceURI> is different from "http://www.w3.org/2000/xmlns/".
 
@@ -118,7 +118,7 @@ I<C<namespaceURI>>: The namespace URI of the element to create
 
 I<C<qualifiedName>>: The qualified name of the element to create
 
-I<Returns>: a new Element object with the following attributes: %Node.nodeName = @qualifiedName, %Node.namespaceURI = @namespaceURI, %Node.prefix = prefix, extracted from @qualifiedName, %Node.localName = localName, extracted from @qualifiedName, %Element.tagName = @qualifiedName.
+I<Returns>: a new Element object with the following attributes: %Node.nodeName = I<qualifiedName>, %Node.namespaceURI = I<namespaceURI>, %Node.prefix = prefix, extracted from I<qualifiedName>, %Node.localName = localName, extracted from I<qualifiedName>, %Element.tagName = I<qualifiedName>.
 
 C<GDOME_NAMESPACE_ERR>: Raised if the I<qualifiedName> is malformed, if the I<qualifiedName> has a prefix and the I<namespaceURI> is undef, or if the I<qualifiedName> has a prefix that is "xml" and the I<namespaceURI> is different from "http://www.w3.org/XML/1998/namespace".
 
@@ -158,7 +158,7 @@ I<Returns>: The new TextNode object.
 
 I<C<elementId>>: The unique id value for an element
 
-I<Returns>: the Element whose %ID is given by @elementId. If no such element exists, returns undef. Behavior is not defined if more than one element has this %ID.
+I<Returns>: the Element whose %ID is given by I<elementId>. If no such element exists, returns undef. Behavior is not defined if more than one element has this %ID.
 
 
 =item $nodeList = $doc->getElementsByTagName($tagname);
@@ -187,7 +187,7 @@ Imports a node from another document to this document. The returned node has no 
 
 I<C<importedNode>>: The node to import.
 
-I<C<deep>>: If %TRUE, recursively import the subtree under the specified node;        if %FALSE, import only the node itself. This has no effect on Attr,        EntityReference, and Notation nodes.
+I<C<deep>>: If 1, recursively import the subtree under the specified node;        if 0, import only the node itself. This has no effect on Attr,        EntityReference, and Notation nodes.
 
 I<Returns>: the imported node that belongs to this Document.
 
@@ -198,7 +198,7 @@ C<GDOME_NOT_SUPPORTED_ERR>: Raised if the type of node being imported is not sup
 
 Save the DOM tree of the Document to a string
 
-I<C<mode>>: the indentation mode wanted
+I<C<mode>>: the indentation mode wanted, either GDOME_SAVE_STANDARD or GDOME_SAVE_LIBXML_INDENT
 
 I<Returns>: string representation of DOM tree
 

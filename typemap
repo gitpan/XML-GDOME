@@ -1,4 +1,5 @@
 TYPEMAP
+char *			G_CHAR
 const char *		T_PV
 const gchar *		T_PV
 gchar *			T_PV
@@ -25,6 +26,16 @@ GdomeComment *          G_OBJECT
 GdomeCDATASection *     G_OBJECT
 GdomeEventListener *    G_OBJECT
 GdomeSavingCode         T_IV
+GdomeXPathEvaluator *   G_OBJECT
+GdomeXPathNamespace *   G_OBJECT
+GdomeXPathNSResolver *  G_OBJECT
+GdomeXPathResult *      G_OBJECT
+GdomeXPathSetIterator * G_OBJECT
+GdomeNodeIterator *     G_OBJECT
+GdomeNodeFilter *       G_OBJECT
+GdomeEventListener *    G_OBJECT
+GdomeEvent *            G_OBJECT
+GdomeMutationEvent *    G_OBJECT
 
 INPUT
 G_OBJECT
@@ -43,7 +54,14 @@ G_NODE
 
 G_STRING
     if( SvOK($arg) )
-       $var = gdome_str_mkref_own((gchar *) SvPV($arg, SvLEN($arg)));
+       $var = gdome_str_mkref_dup((gchar *) SvPV($arg, PL_na));
+    else {
+       $var = NULL;
+    }
+
+G_CHAR
+    if( SvOK($arg) )
+       $var = (char *) SvPV($arg, PL_na);
     else {
        $var = NULL;
     }
@@ -76,6 +94,8 @@ G_NODE
       CLASS = "XML::GDOME::DocumentFragment"; break;
     case GDOME_NOTATION_NODE:
       CLASS = "XML::GDOME::Notation"; break;
+    case GDOME_DOCUMENT_NODE:
+      CLASS = "XML::GDOME::Document"; break;
     default:
       break;
   }
@@ -83,6 +103,14 @@ G_NODE
 
 G_STRING
     if($var != NULL) {
-        $arg = newSVpv($var->str, 0);
+        $arg = newSVpv($var->str, xmlStrlen($var->str));
         gdome_str_unref($var);
+	sv_2mortal($arg);
+    }
+
+G_CHAR
+    if($var != NULL) {
+        $arg = newSVpv($var, xmlStrlen($var));
+        free($var);
+	sv_2mortal($arg);
     }

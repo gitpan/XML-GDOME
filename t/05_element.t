@@ -8,7 +8,13 @@ use strict;
 
 my $doc = XML::GDOME->createDocFromURI("t/xml/test-element.xml", GDOME_LOAD_PARSING);
 my $el = $doc->documentElement;
-
+undef $doc;
+my @nodes = $el->getChildNodes;
+for  my $node (@nodes) {
+  if ($node->getNodeType == GDOME_ELEMENT_NODE) {
+    my $nnm = $node->attributes;
+  }
+}
 ok($el->tagName,"TEST");
 
 my $nnm = $el->attributes;

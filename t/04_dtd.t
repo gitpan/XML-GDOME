@@ -35,3 +35,4 @@ my $not = $nots->getNamedItem("type1");
 ok($not->nodeName, "type1");
 ok($not->publicId, undef);
 ok($not->systemId, "program1");
+

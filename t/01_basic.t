@@ -1,5 +1,5 @@
 use Test;
-BEGIN { plan tests => 5 }
+BEGIN { plan tests => 8 }
 END { ok(0) unless $loaded }
 use XML::GDOME;
 $loaded = 1;
@@ -35,3 +35,24 @@ eval {
   $doc = XML::GDOME->createDocument("asdf:asdf", "TEST", undef);
 };
 ok($@ =~ m!GDOME_NAMESPACE_ERR!);
+
+# test we throw an error on parsing erroneous stuff
+# Unknown entity
+eval { 
+  $doc = XML::GDOME->createDocFromString(qq{<a>foo&bar;</a>},
+	                                 GDOME_LOAD_VALIDATING);
+};
+ok($@ =~ m!Entity 'bar' not defined!);
+
+# Unbalanced code
+eval { 
+  $doc = XML::GDOME->createDocFromString(qq{<a><bar></a>});
+};
+ok($@ =~ m!Opening and ending tag mismatch: bar and a!);
+
+# And from a file...
+eval { 
+  $doc = XML::GDOME->createDocFromURI("t/examplemjo.xml",
+	                               GDOME_LOAD_VALIDATING);
+};
+ok($@ =~ m!Entity 'bar' not defined!);

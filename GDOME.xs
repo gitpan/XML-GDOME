@@ -8,15 +8,282 @@ extern "C" {
 #include "XSUB.h"
 
 #include <libxml/hash.h>
+#include <libxml/xmlerror.h>
 #include "gdome.h"
+#include "gdome-xpath.h"
+#include "gdome-traversal.h"
+#include "gdome-events.h"
+
+#include "dom.h"
+
+typedef struct _Gdome_xml_Node Gdome_xml_Node;
+struct _Gdome_xml_Node {
+        GdomeNode super;
+        const GdomeNodeVtab *vtab;
+        int refcnt;
+  xmlNode *n;
+  GdomeAccessType accessType;
+  void *ll;
+  xmlNs *ns;
+};
+
+xmlNs * gdome_xmlGetNsDeclByAttr (xmlAttr *a);
 
 #ifdef __cplusplus
 }
 #endif
 
 char *errorMsg[101];
+
+#define SET_CB(cb, fld) \
+    RETVAL = cb ? newSVsv(cb) : &PL_sv_undef;\
+    if (SvOK(fld)) {\
+        if (cb) {\
+            if (cb != fld) {\
+                sv_setsv(cb, fld);\
+            }\
+        }\
+        else {\
+            cb = newSVsv(fld);\
+        }\
+    }\
+    else {\
+        if (cb) {\
+            SvREFCNT_dec(cb);\
+            cb = NULL;\
+        }\
+    }
+
+static SV * GDOMEPerl_match_cb = NULL;
+static SV * GDOMEPerl_read_cb = NULL;
+static SV * GDOMEPerl_open_cb = NULL;
+static SV * GDOMEPerl_close_cb = NULL;
+static SV * GDOMEPerl_error = NULL;
+
+/* Shamelessly cribbed straight from LibXML.xs */
+/* This handler function appends 
+   an error message to the GDOMEPerl_error global */
 void
-gdome_perl_load_error_strings() {
+GDOMEPerl_error_handler(void * ctxt, const char * msg, ...) 
+{ 
+    va_list args; 
+    SV * sv; 
+     
+    sv = NEWSV(0,512); 
+     
+    va_start(args, msg); 
+    sv_vsetpvfn(sv, msg, strlen(msg), &args, NULL, 0, NULL); 
+    va_end(args); 
+     
+    sv_catsv(GDOMEPerl_error, sv); /* remember the last error */ 
+    SvREFCNT_dec(sv); 
+} 
+
+int 
+GDOMEPerl_input_match(char const * filename)
+{
+    int results = 0;
+    SV * global_cb;
+    SV * callback = NULL;
+
+    if ((global_cb = perl_get_sv("XML::GDOME::match_cb", FALSE))
+            && SvTRUE(global_cb)) {
+        callback = global_cb;
+    }
+    else if (GDOMEPerl_match_cb && SvTRUE(GDOMEPerl_match_cb)) {
+        callback = GDOMEPerl_match_cb;
+    }
+
+    if (callback) {
+        int count;
+        SV * res;
+
+        dSP;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+        EXTEND(SP, 1);
+        PUSHs(sv_2mortal(newSVpv((char*)filename, 0)));
+        PUTBACK;
+
+        count = perl_call_sv(callback, G_SCALAR);
+
+        SPAGAIN;
+        
+        if (count != 1) {
+            croak("match callback must return a single value");
+        }
+        
+        res = POPs;
+
+        if (SvTRUE(res)) {
+            results = 1;
+        }
+        
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+    }
+    
+    return results;
+}
+
+void * 
+GDOMEPerl_input_open(char const * filename)
+{
+    SV * results;
+    SV * global_cb;
+    SV * callback = NULL;
+
+    if ((global_cb = perl_get_sv("XML::GDOME::open_cb", FALSE))
+            && SvTRUE(global_cb)) {
+        callback = global_cb;
+    }
+    else if (GDOMEPerl_open_cb && SvTRUE(GDOMEPerl_open_cb)) {
+        callback = GDOMEPerl_open_cb;
+    }
+
+    if (callback) {
+        int count;
+
+        dSP;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+        EXTEND(SP, 1);
+        PUSHs(sv_2mortal(newSVpv((char*)filename, 0)));
+        PUTBACK;
+
+        count = perl_call_sv(callback, G_SCALAR);
+
+        SPAGAIN;
+        
+        if (count != 1) {
+            croak("open callback must return a single value");
+        }
+
+        results = POPs;
+
+        SvREFCNT_inc(results);
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+    }
+    
+    return (void *)results;
+}
+
+int 
+GDOMEPerl_input_read(void * context, char * buffer, int len)
+{
+    SV * results = NULL;
+    STRLEN res_len = 0;
+    const char * output;
+    SV * global_cb;
+    SV * callback = NULL;
+    SV * ctxt = (SV *)context;
+
+    if ((global_cb = perl_get_sv("XML::GDOME::read_cb", FALSE))
+            && SvTRUE(global_cb)) {
+        callback = global_cb;
+    }
+    else if (GDOMEPerl_read_cb && SvTRUE(GDOMEPerl_read_cb)) {
+        callback = GDOMEPerl_read_cb;
+    }
+    
+    if (callback) {
+        int count;
+
+        dSP;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+        EXTEND(SP, 2);
+        PUSHs(ctxt);
+        PUSHs(sv_2mortal(newSViv(len)));
+        PUTBACK;
+
+        count = perl_call_sv(callback, G_SCALAR);
+
+        SPAGAIN;
+        
+        if (count != 1) {
+            croak("read callback must return a single value");
+        }
+
+        output = POPp;
+        if (output != NULL) {
+            res_len = strlen(output);
+            if (res_len) {
+                strncpy(buffer, output, res_len);
+            }
+            else {
+                buffer[0] = 0;
+            }
+        }
+        
+        FREETMPS;
+        LEAVE;
+    }
+    
+    /* warn("read, asked for: %d, returning: [%d] %s
+", len, res_len, buffer); */
+    return res_len;
+}
+
+void 
+GDOMEPerl_input_close(void * context)
+{
+    SV * global_cb;
+    SV * callback = NULL;
+    SV * ctxt = (SV *)context;
+
+    if ((global_cb = perl_get_sv("XML::GDOME::close_cb", FALSE))
+            && SvTRUE(global_cb)) {
+        callback = global_cb;
+    }
+    else if (GDOMEPerl_close_cb && SvTRUE(GDOMEPerl_close_cb)) {
+        callback = GDOMEPerl_close_cb;
+    }
+
+    if (callback) {
+        int count;
+
+        dSP;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+        EXTEND(SP, 1);
+        PUSHs(ctxt);
+        PUTBACK;
+
+        count = perl_call_sv(callback, G_SCALAR);
+
+        SPAGAIN;
+
+        SvREFCNT_dec(ctxt);
+        
+        if (!count) {
+            croak("close callback failed");
+        }
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+    }
+}
+
+void
+GDOMEPerl_load_error_strings() {
   errorMsg[0] = "GDOME_NOEXCEPTION_ERR";
   errorMsg[1] = "GDOME_INDEX_SIZE_ERR";
   errorMsg[2] = "GDOME_DOMSTRING_SIZE_ERR";
@@ -34,6 +301,8 @@ gdome_perl_load_error_strings() {
   errorMsg[14] = "GDOME_NAMESPACE_ERR";
   errorMsg[15] = "GDOME_INVALID_ACCESS_ERR";
   errorMsg[100] = "GDOME_NULL_POINTER_ERR";
+  errorMsg[101] = "GDOME_INVALID_EXPRESSION_ERR";
+  errorMsg[102] = "GDOME_TYPE_ERR";
 }
 
 MODULE = XML::GDOME       PACKAGE = XML::GDOME::DOMImplementation
@@ -41,7 +310,12 @@ MODULE = XML::GDOME       PACKAGE = XML::GDOME::DOMImplementation
 PROTOTYPES: DISABLE
 
 BOOT:
-    gdome_perl_load_error_strings();
+    GDOMEPerl_load_error_strings();
+    xmlInitParser();
+    xmlRegisterInputCallbacks((xmlInputMatchCallback) GDOMEPerl_input_match,
+                              (xmlInputOpenCallback) GDOMEPerl_input_open,
+                              (xmlInputReadCallback) GDOMEPerl_input_read,
+                              (xmlInputCloseCallback) GDOMEPerl_input_close);
 
 GdomeDOMImplementation *
 mkref()
@@ -85,8 +359,30 @@ createDocument(self,namespaceURI,qualifiedName,doctype)
     PREINIT:
         char * CLASS = "XML::GDOME::Document";
         GdomeException exc;
+        char * errstr;
+        STRLEN len = 0;
     CODE:
+        GDOMEPerl_error = NEWSV(0, 512);
+        sv_setpvn(GDOMEPerl_error, "", 0);
+
+        xmlSetGenericErrorFunc( NULL ,  
+				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
+        
         RETVAL = gdome_di_createDocument(self,namespaceURI,qualifiedName,doctype,&exc);
+
+        xmlSetGenericErrorFunc( NULL , NULL);
+        
+        sv_2mortal(GDOMEPerl_error);
+
+        errstr = SvPV(GDOMEPerl_error, len);
+        if (len > 0){
+	  croak("%s",errstr);
+	}
+
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(qualifiedName != NULL)
+          gdome_str_unref(qualifiedName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -102,8 +398,32 @@ createDocumentType(self,qualifiedName,publicId,systemId)
     PREINIT:
         char * CLASS = "XML::GDOME::DocumentType";
         GdomeException exc;
+        char * errstr;
+        STRLEN len = 0;
     CODE:
+        GDOMEPerl_error = NEWSV(0, 512);
+        sv_setpvn(GDOMEPerl_error, "", 0);
+
+        xmlSetGenericErrorFunc( NULL ,  
+				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
+        
         RETVAL = gdome_di_createDocumentType(self,qualifiedName,publicId,systemId,&exc);
+
+        xmlSetGenericErrorFunc( NULL , NULL);
+        
+        sv_2mortal(GDOMEPerl_error);
+
+        errstr = SvPV(GDOMEPerl_error, len);
+        if (len > 0){
+	  croak("%s",errstr);
+	}
+
+        if(qualifiedName != NULL)
+          gdome_str_unref(qualifiedName);
+        if(publicId != NULL)
+          gdome_str_unref(publicId);
+        if(systemId != NULL)
+          gdome_str_unref(systemId);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -119,6 +439,10 @@ hasFeature(self,feature,version)
         GdomeException exc;
     CODE:
         RETVAL = gdome_di_hasFeature(self,feature,version,&exc);
+        if(feature != NULL)
+          gdome_str_unref(feature);
+        if(version != NULL)
+          gdome_str_unref(version);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -145,8 +469,26 @@ createDocFromURI(self,uri,mode)
     PREINIT:
         char * CLASS = "XML::GDOME::Document";
         GdomeException exc;
+        char * errstr;
+        STRLEN len = 0;
     CODE:
+        GDOMEPerl_error = NEWSV(0, 512);
+        sv_setpvn(GDOMEPerl_error, "", 0);
+
+        xmlSetGenericErrorFunc( NULL ,  
+				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
+        
         RETVAL = gdome_di_createDocFromURI(self,uri,mode,&exc);
+
+        xmlSetGenericErrorFunc( NULL , NULL);
+        
+        sv_2mortal(GDOMEPerl_error);
+
+        errstr = SvPV(GDOMEPerl_error, len);
+        if (len > 0){
+	  croak("%s",errstr);
+	}
+  
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -161,8 +503,26 @@ createDocFromMemory(self,str,mode)
     PREINIT:
         char * CLASS = "XML::GDOME::Document";
         GdomeException exc;
+        char * errstr;
+        STRLEN len = 0;
     CODE:
+        GDOMEPerl_error = NEWSV(0, 512);
+        sv_setpvn(GDOMEPerl_error, "", 0);
+
+        xmlSetGenericErrorFunc( NULL ,  
+				(xmlGenericErrorFunc)GDOMEPerl_error_handler); 
+        
         RETVAL = gdome_di_createDocFromMemory(self,str,mode,&exc);
+
+        xmlSetGenericErrorFunc( NULL , NULL);
+        
+        sv_2mortal(GDOMEPerl_error);
+
+        errstr = SvPV(GDOMEPerl_error, len);
+        if (len > 0){
+	  croak("%s",errstr);
+	}
+  
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -196,6 +556,7 @@ saveDocToString(self,doc,mode)
     CODE:
         if ( gdome_di_saveDocToMemory(self,doc,mem,mode,&exc) ) {
           RETVAL = *mem;
+          free(mem);
         }
     OUTPUT:
         RETVAL
@@ -205,16 +566,54 @@ MODULE = XML::GDOME       PACKAGE = XML::GDOME::Node
 int
 gdome_ref(self)
         GdomeNode * self
+    PREINIT:
+        Gdome_xml_Node *priv;
+        xmlNs *ns;
     CODE:
-        RETVAL = (int) self;
+        priv = (Gdome_xml_Node *)self;
+        if (priv->n->type == XML_ATTRIBUTE_NODE) {
+          ns = gdome_xmlGetNsDeclByAttr((xmlAttr *)priv->n);
+          if (ns != NULL)
+            RETVAL = (int) ns;
+          else
+            RETVAL = (int) priv->n;
+        } else if (priv->n->type == XML_NAMESPACE_DECL)
+          RETVAL = (int) priv->n->ns;
+        else
+          RETVAL = (int) priv->n;
+    OUTPUT:
+        RETVAL
+
+char *
+toString( self )
+        GdomeNode * self
+    PREINIT:
+        Gdome_xml_Node *priv;
+        xmlBufferPtr buffer;
+        char *ret = NULL;
+    CODE:
+        priv = (Gdome_xml_Node *)self;
+        buffer = xmlBufferCreate();
+        xmlNodeDump( buffer, priv->n->doc, priv->n, 0, 0 );
+        if ( buffer->content != 0 ) {
+            ret= xmlStrdup( buffer->content );
+        }
+        xmlBufferFree( buffer );
+
+        if ( priv->n->doc != NULL ) {
+            xmlChar *retDecoded = domDecodeString( priv->n->doc->encoding, ret );
+            xmlFree( ret );
+            RETVAL = retDecoded;
+        } else {
+            RETVAL = ret;
+        }
+
     OUTPUT:
         RETVAL
 
 GdomeNamedNodeMap *
-attributes(self)
+_attributes(self)
         GdomeNode * self
-    ALIAS:
-        XML::GDOME::Node::getAttributes = 1
     PREINIT:
         char * CLASS = "XML::GDOME::NamedNodeMap";
         GdomeException exc;
@@ -227,10 +626,8 @@ attributes(self)
         RETVAL
 
 GdomeNodeList *
-childNodes(self)
+_childNodes(self)
         GdomeNode * self
-    ALIAS:
-        XML::GDOME::Node::getChildNodes = 1
     PREINIT:
         char * CLASS = "XML::GDOME::NodeList";
         GdomeException exc;
@@ -358,6 +755,8 @@ setNodeValue(self, val)
         GdomeException exc;
     CODE:
         gdome_n_set_nodeValue(self, val, &exc);
+        if (val != NULL)
+          gdome_str_unref(val);
 
 GdomeDOMString *
 nodeValue(self)
@@ -414,6 +813,8 @@ setPrefix(self, val)
         GdomeException exc;
     CODE:
         gdome_n_set_prefix(self, val, &exc);
+        if (val != NULL)
+          gdome_str_unref(val);
 
 GdomeDOMString *
 prefix(self)
@@ -551,6 +952,10 @@ isSupported(self,feature,version)
         GdomeException exc;
     CODE:
         RETVAL = gdome_n_isSupported(self,feature,version,&exc);
+        if(feature != NULL)
+          gdome_str_unref(feature);
+        if(version != NULL)
+          gdome_str_unref(version);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -609,6 +1014,8 @@ addEventListener(self,type,listener,useCapture)
         GdomeException exc;
     CODE:
         gdome_n_addEventListener(self,type,listener,useCapture,&exc);
+        if(type != NULL)
+          gdome_str_unref(type);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -623,6 +1030,8 @@ removeEventListener(self,type,listener,useCapture)
         GdomeException exc;
     CODE:
         gdome_n_removeEventListener(self,type,listener,useCapture,&exc);
+        if(type != NULL)
+          gdome_str_unref(type);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -670,6 +1079,15 @@ canAppend(self,newChild)
 MODULE = XML::GDOME       PACKAGE = XML::GDOME::DocumentFragment
 
 MODULE = XML::GDOME       PACKAGE = XML::GDOME::Document
+
+void
+process_xinclude(self)
+        GdomeDocument* self
+    PREINIT:
+        Gdome_xml_Node *priv;        
+    CODE:
+        priv = (Gdome_xml_Node *)self;
+        xmlXIncludeProcess((xmlDocPtr)priv->n);
 
 GdomeDocumentType *
 doctype(self)
@@ -728,6 +1146,8 @@ createAttribute(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createAttribute(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -744,6 +1164,10 @@ createAttributeNS(self,namespaceURI,qualifiedName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createAttributeNS(self,namespaceURI,qualifiedName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(qualifiedName != NULL)
+          gdome_str_unref(qualifiedName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -759,6 +1183,8 @@ createCDATASection(self,data)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createCDATASection(self,data,&exc);
+        if(data != NULL)
+          gdome_str_unref(data);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -774,6 +1200,8 @@ createComment(self,data)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createComment(self,data,&exc);
+        if(data != NULL)
+          gdome_str_unref(data);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -803,6 +1231,8 @@ createElement(self,tagName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createElement(self,tagName,&exc);
+        if(tagName != NULL)
+          gdome_str_unref(tagName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -819,6 +1249,10 @@ createElementNS(self,namespaceURI,qualifiedName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createElementNS(self,namespaceURI,qualifiedName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(qualifiedName != NULL)
+          gdome_str_unref(qualifiedName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -834,6 +1268,8 @@ createEntityReference(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createEntityReference(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -850,6 +1286,10 @@ createProcessingInstruction(self,target,data)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createProcessingInstruction(self,target,data,&exc);
+        if(target != NULL)
+          gdome_str_unref(target);
+        if(data != NULL)
+          gdome_str_unref(data);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -865,6 +1305,8 @@ createTextNode(self,data)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createTextNode(self,data,&exc);
+        if(data != NULL)
+          gdome_str_unref(data);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -880,6 +1322,8 @@ getElementById(self,elementId)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_getElementById(self,elementId,&exc);
+        if(elementId != NULL)
+          gdome_str_unref(elementId);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -895,6 +1339,8 @@ getElementsByTagName(self,tagname)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_getElementsByTagName(self,tagname,&exc);
+        if(tagname != NULL)
+          gdome_str_unref(tagname);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -911,6 +1357,10 @@ getElementsByTagNameNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_getElementsByTagNameNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -942,6 +1392,8 @@ createEvent(self,eventType)
         GdomeException exc;
     CODE:
         RETVAL = gdome_doc_createEvent(self,eventType,&exc);
+        if(eventType != NULL)
+          gdome_str_unref(eventType);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -958,6 +1410,8 @@ setData(self, val)
         GdomeException exc;
     CODE:
         gdome_cd_set_data(self, val, &exc);
+        if (val != NULL)
+          gdome_str_unref(val);
 
 GdomeDOMString *
 data(self)
@@ -997,6 +1451,8 @@ appendData(self,arg)
         GdomeException exc;
     CODE:
         gdome_cd_appendData(self,arg,&exc);
+        if(arg != NULL)
+          gdome_str_unref(arg);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1023,6 +1479,8 @@ insertData(self,offset,arg)
         GdomeException exc;
     CODE:
         gdome_cd_insertData(self,offset,arg,&exc);
+        if(arg != NULL)
+          gdome_str_unref(arg);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1037,6 +1495,8 @@ replaceData(self,offset,count,arg)
         GdomeException exc;
     CODE:
         gdome_cd_replaceData(self,offset,count,arg,&exc);
+        if(arg != NULL)
+          gdome_str_unref(arg);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1133,6 +1593,8 @@ setValue(self, val)
         GdomeException exc;
     CODE:
         gdome_a_set_value(self, val, &exc);
+        if (val != NULL)
+          gdome_str_unref(val);
 
 GdomeDOMString *
 value(self)
@@ -1174,6 +1636,8 @@ getAttribute(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_getAttribute(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1189,6 +1653,10 @@ getAttributeNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_getAttributeNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1204,6 +1672,8 @@ getAttributeNode(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_getAttributeNode(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1220,6 +1690,10 @@ getAttributeNodeNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_getAttributeNodeNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1235,6 +1709,8 @@ getElementsByTagName(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_getElementsByTagName(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1251,6 +1727,10 @@ getElementsByTagNameNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_getElementsByTagNameNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1265,6 +1745,8 @@ hasAttribute(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_hasAttribute(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1280,6 +1762,10 @@ hasAttributeNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_el_hasAttributeNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1294,6 +1780,8 @@ removeAttribute(self,name)
         GdomeException exc;
     CODE:
         gdome_el_removeAttribute(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1307,6 +1795,10 @@ removeAttributeNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         gdome_el_removeAttributeNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1335,6 +1827,10 @@ setAttribute(self,name,value)
         GdomeException exc;
     CODE:
         gdome_el_setAttribute(self,name,value,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
+        if(value != NULL)
+          gdome_str_unref(value);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1349,6 +1845,12 @@ setAttributeNS(self,namespaceURI,qualifiedName,value)
         GdomeException exc;
     CODE:
         gdome_el_setAttributeNS(self,namespaceURI,qualifiedName,value,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(qualifiedName != NULL)
+          gdome_str_unref(qualifiedName);
+        if(value != NULL)
+          gdome_str_unref(value);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1568,6 +2070,8 @@ setData(self, val)
         GdomeException exc;
     CODE:
         gdome_pi_set_data(self, val, &exc);
+        if (val != NULL)
+          gdome_str_unref(val);
 
 GdomeDOMString *
 data(self)
@@ -1593,6 +2097,24 @@ target(self)
         GdomeException exc;
     CODE:
         RETVAL = gdome_pi_target(self, &exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+MODULE = XML::GDOME       PACKAGE = XML::GDOME::XPath::Namespace
+
+GdomeElement *
+ownerElement(self)
+        GdomeXPathNamespace * self
+    ALIAS:
+        XML::GDOME::XPathNamespace::getOwnerElement = 1
+    PREINIT:
+        char * CLASS = "XML::GDOME::Element";
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpns_ownerElement(self, &exc);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1705,6 +2227,8 @@ getNamedItem(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_nnm_getNamedItem(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1721,6 +2245,10 @@ getNamedItemNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_nnm_getNamedItemNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1751,6 +2279,8 @@ removeNamedItem(self,name)
         GdomeException exc;
     CODE:
         RETVAL = gdome_nnm_removeNamedItem(self,name,&exc);
+        if(name != NULL)
+          gdome_str_unref(name);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1767,6 +2297,10 @@ removeNamedItemNS(self,namespaceURI,localName)
         GdomeException exc;
     CODE:
         RETVAL = gdome_nnm_removeNamedItemNS(self,namespaceURI,localName,&exc);
+        if(namespaceURI != NULL)
+          gdome_str_unref(namespaceURI);
+        if(localName != NULL)
+          gdome_str_unref(localName);
         if (exc>0){
           croak("%s",errorMsg[exc]);
         }
@@ -1799,6 +2333,331 @@ setNamedItemNS(self,arg)
         RETVAL = gdome_nnm_setNamedItemNS(self,arg,&exc);
         if (exc>0){
           croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+MODULE = XML::GDOME       PACKAGE = XML::GDOME::XPath::Evaluator
+
+GdomeXPathEvaluator *
+mkref()
+    PREINIT:
+        char * CLASS = "XML::GDOME::XPath::Evaluator";
+    CODE:
+        RETVAL = gdome_xpeval_mkref();
+    OUTPUT:
+        RETVAL
+
+void
+ref(self)
+        GdomeXPathEvaluator * self
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        gdome_xpeval_ref(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+
+void
+unref(self)
+        GdomeXPathEvaluator * self
+    ALIAS:
+        XML::GDOME::XPath::Evaluator::DESTROY = 1
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        gdome_xpeval_unref(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+
+GdomeXPathNSResolver *
+createNSResolver(self,nodeResolver)
+        GdomeXPathEvaluator * self
+        GdomeNode * nodeResolver
+    PREINIT:
+        char * CLASS = "XML::GDOME::XPath::NSResolver";
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpeval_createNSResolver(self,nodeResolver,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+GdomeXPathResult *
+createResult(self)
+        GdomeXPathEvaluator * self
+    PREINIT:
+        char * CLASS = "XML::GDOME::XPath::Result";
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpeval_createResult(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+GdomeXPathResult *
+evaluate(self,expression,contextNode,resolver,type,result)
+        GdomeXPathEvaluator * self
+        GdomeDOMString * expression
+        GdomeNode * contextNode
+        GdomeXPathNSResolver * resolver
+        unsigned int type
+        GdomeXPathResult * result
+    PREINIT:
+        char * CLASS = "XML::GDOME::XPath::Result";
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpeval_evaluate(self,expression,contextNode,resolver,type,result,&exc);
+        if(expression != NULL)
+          gdome_str_unref(expression);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+MODULE = XML::GDOME       PACKAGE = XML::GDOME::XPath::NSResolver
+
+void
+ref(self)
+        GdomeXPathNSResolver * self
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        gdome_xpnsresolv_ref(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+
+void
+unref(self)
+        GdomeXPathNSResolver * self
+    ALIAS:
+        XML::GDOME::XPath::NSResolver::DESTROY = 1
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        gdome_xpnsresolv_unref(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+
+GdomeDOMString *
+lookupNamespaceURI(self,prefix)
+        GdomeXPathNSResolver * self
+        GdomeDOMString * prefix
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpnsresolv_lookupNamespaceURI(self,prefix,&exc);
+        if(prefix != NULL)
+          gdome_str_unref(prefix);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+MODULE = XML::GDOME       PACKAGE = XML::GDOME::XPath::Result
+
+unsigned short
+resultType(self)
+        GdomeXPathResult * self
+    ALIAS:
+        XML::GDOME::XPathResult::getResultType = 1
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpresult_resultType(self, &exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+GdomeBoolean
+booleanValue(self)
+        GdomeXPathResult * self
+    ALIAS:
+        XML::GDOME::XPathResult::getBooleanValue = 1
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpresult_booleanValue(self, &exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+double
+numberValue(self)
+        GdomeXPathResult * self
+    ALIAS:
+        XML::GDOME::XPathResult::getNumberValue = 1
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpresult_numberValue(self, &exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+GdomeDOMString *
+stringValue(self)
+        GdomeXPathResult * self
+    ALIAS:
+        XML::GDOME::XPathResult::getStringValue = 1
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpresult_stringValue(self, &exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+GdomeNode *
+singleNodeValue(self)
+        GdomeXPathResult * self
+    ALIAS:
+        XML::GDOME::XPathResult::getSingleNodeValue = 1
+    PREINIT:
+        char * CLASS = "XML::GDOME::Node";
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpresult_singleNodeValue(self, &exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+void
+ref(self)
+        GdomeXPathResult * self
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        gdome_xpresult_ref(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+
+void
+unref(self)
+        GdomeXPathResult * self
+    ALIAS:
+        XML::GDOME::XPath::Result::DESTROY = 1
+    PREINIT:
+        GdomeException exc;
+    CODE:
+        gdome_xpresult_unref(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+
+GdomeNode *
+iterateNext(self)
+        GdomeXPathResult * self
+    PREINIT:
+        char * CLASS = "XML::GDOME::Node";
+        GdomeException exc;
+    CODE:
+        RETVAL = gdome_xpresult_iterateNext(self,&exc);
+        if (exc>0){
+          croak("%s",errorMsg[exc]);
+        }
+    OUTPUT:
+        RETVAL
+
+
+
+MODULE = XML::GDOME         PACKAGE = XML::GDOME
+
+SV*
+encodeToUTF8( encoding, string )
+        const char * encoding
+        const char * string
+    PREINIT:
+        char * tstr;
+    CODE:
+        tstr =  domEncodeString( encoding, string );
+        RETVAL = newSVpvn( (char *)tstr, xmlStrlen( tstr ) );
+        xmlFree( tstr );
+    OUTPUT:
+        RETVAL
+ 
+SV*
+decodeFromUTF8( encoding, string )
+        const char * encoding
+        const char * string
+    PREINIT:
+        char * tstr;
+    CODE:
+        tstr =  domDecodeString( encoding, string );
+        RETVAL = newSVpvn( (char *)tstr, xmlStrlen( tstr ) );
+        xmlFree( tstr );
+    OUTPUT:
+        RETVAL
+
+SV *
+_match_callback(self, ...)
+        SV * self
+    CODE:
+        if (items > 1) {
+            SET_CB(GDOMEPerl_match_cb, ST(1));
+        }
+        else {
+            RETVAL = GDOMEPerl_match_cb ? sv_2mortal(GDOMEPerl_match_cb) : &PL_sv_undef;
+        }
+    OUTPUT:
+        RETVAL
+
+SV *
+_open_callback(self, ...)
+        SV * self
+    CODE:
+        if (items > 1) {
+            SET_CB(GDOMEPerl_open_cb, ST(1));
+        }
+        else {
+            RETVAL = GDOMEPerl_open_cb ? sv_2mortal(GDOMEPerl_open_cb) : &PL_sv_undef;
+        }
+    OUTPUT:
+        RETVAL
+
+SV *
+_read_callback(self, ...)
+        SV * self
+    CODE:
+        if (items > 1) {
+            SET_CB(GDOMEPerl_read_cb, ST(1));
+        }
+        else {
+            RETVAL = GDOMEPerl_read_cb ? sv_2mortal(GDOMEPerl_read_cb) : &PL_sv_undef;
+        }
+    OUTPUT:
+        RETVAL
+
+SV *
+_close_callback(self, ...)
+        SV * self
+    CODE:
+        if (items > 1) {
+            SET_CB(GDOMEPerl_close_cb, ST(1));
+        }
+        else {
+            RETVAL = GDOMEPerl_close_cb ? sv_2mortal(GDOMEPerl_close_cb) : &PL_sv_undef;
         }
     OUTPUT:
         RETVAL

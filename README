@@ -1,17 +1,21 @@
-XML::GDOME version 0.7.0
+XML::GDOME version 0.76
 =======================
+
+REQUIREMENTS
+
+Requires gdome2 0.7.1 or higher, available from gnome CVS.  To
+checkout the files from CVS, run:
+
+$ export CVSROOT=':pserver:anonymous@anoncvs.gnome.org:/cvs/gnome'
+$ cvs login      # press 'return' for password
+$ cvs -z4 checkout gdome2
 
 DESCRIPTION
 
 XML::GDOME is a perl module that provides the DOM Level 2 Core API
 for accessing XML documents.
 
-It uses a XS wrapper around the libgdome library.
-
-REQUIREMENTS
-
-Requires libgdome 0.7.0, available from
-http://phd.cs.unibo.it/gdome2/
+It uses a XS wrapper around the gdome2 library.
 
 INSTALLATION
 
@@ -24,5 +28,7 @@ make install
 
 COPYRIGHT AND LICENCE
 
-Copyright (c) 2001 T.J. Mather.  XML::GDOME is free software;
+Copyright 2001, 2002 T.J. Mather.  
+Copyright 2001, AxKit.com Ltd. All rights reserved. 
+XML::GDOME is free software;
 you may redistribute it and/or modify it under the same terms as Perl itself. 

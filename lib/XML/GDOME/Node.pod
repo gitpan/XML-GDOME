@@ -30,6 +30,7 @@
   $node     = $n->removeChild($oldChild);
   $node     = $n->replaceChild($newChild,$oldChild);
   $bool     = $n->canAppend($newChild);
+  $str      = $n->toString($mode);
 
 =head1 METHODS
 
@@ -176,7 +177,7 @@ I<Returns>: 1 if this node has any children, 0 otherwise.
 
 =item $node = $n->insertBefore($newChild,$refChild);
 
-Inserts the node I<newChild> before the existing child node @refChild. If I<refChild> is undef, insert I<newChild> at the end of the list of children. If I<newChild> is a DocumentFragment node, all of its children are inserted, in the same order, before @refChild. If the I<newChild> is already in the tree, it is first removed.
+Inserts the node I<newChild> before the existing child node I<refChild>. If I<refChild> is undef, insert I<newChild> at the end of the list of children. If I<newChild> is a DocumentFragment node, all of its children are inserted, in the same order, before I<refChild>. If the I<newChild> is already in the tree, it is first removed.
 
 I<C<newChild>>: The new node to put in the child list
 
@@ -199,7 +200,7 @@ Tests whether the DOM implementation implements a specific feature and that feat
 
 I<C<feature>>: The name of the feature to test.
 
-I<C<version>>: This is the version number of the feature to test. In Level 2,           version 1, this is the string "2.0". If the version is not           specified, supporting any version of the feature will cause the           method to return %TRUE.
+I<C<version>>: This is the version number of the feature to test. In Level 2,           version 1, this is the string "2.0". If the version is not           specified, supporting any version of the feature will cause the           method to return 1.
 
 I<Returns>: 1 if the specified feature is supported on this node, 0 otherwise.
 

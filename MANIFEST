@@ -4,3 +4,4 @@ GDOME.xs
 Makefile.PL
 MANIFEST
 README
+dom.c

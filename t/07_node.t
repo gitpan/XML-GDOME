@@ -147,3 +147,4 @@ ok($output, qq{<?xml version="1.0"?>
   <NODE1>This is a test string</NODE1>
 </TEST>
 });
+

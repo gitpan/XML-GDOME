@@ -1,0 +1,7 @@
+* Add events module
+* Add traversal module
+* Clean up generate script
+* update test scripts (test scripts are based on gdome2-0.7.0)
+* add full XML::LibXML compatibility
+* separate XML::GDOME::SAX* into new distribution, since
+  XML::SAX shouldn't be required for DOM module.

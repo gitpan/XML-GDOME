@@ -63,3 +63,4 @@ $gnode = $nnm->setNamedItem($c);
 ok($gnode,undef);
 $gnode = $nnm->getNamedItem("FOO10");
 ok(defined($gnode));
+

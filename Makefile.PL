@@ -17,7 +17,7 @@ eval {
     print "running gdome-config... ";
     my $ver = backtick('gdome-config --version');
     my ($major, $minor, $point) = $ver =~ /(\d+).(\d+)\.(\d+)/g;
-    die "VERSION" unless $major == 0 && $minor == 7 && $point == 0;
+    die "VERSION" unless $major == 0 && $minor == 7 && $point == 1;
     $config{LIBS} ||= backtick('gdome-config --libs');
     $config{INC} ||= backtick('gdome-config --cflags');
     print "ok\n";
@@ -25,7 +25,7 @@ eval {
 if ($@) {
     print "failed\n";
     if ($@ =~ /^VERSION/) {
-        die "XML::GDOME needs libgdome version 0.7.0\n";
+        die "XML::GDOME needs gdome2 version 0.7.1 or higher - see README for details\n";
     }
     warn "*** ", $@ if $DEBUG;
     warn "using fallback values for LIBS and INC\n";
@@ -59,9 +59,10 @@ if ($config{LIBS} !~ /\-lglib\b/) {
 WriteMakefile(
     'NAME'		=> 'XML::GDOME',
     'VERSION_FROM'	=> 'GDOME.pm', # finds $VERSION
-    'PREREQ_PM'		=> {}, # e.g., Module::Name => 1.1
+    'PREREQ_PM'		=> { 'XML::SAX' => 0 }, # e.g., Module::Name => 1.1
     'AUTHOR'            => 'T.J. Mather',
-    'ABSTRACT'          => 'Interface to libgdome library',
+    'ABSTRACT'          => 'Interface to gdome2 library',
+    'OBJECT'            => '$(O_FILES)', # add the DOM extensions to libxml2
     %config,
 );
 

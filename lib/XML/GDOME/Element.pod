@@ -155,7 +155,7 @@ C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
 
 Adds a new attribute. If an attribute with that name is already present in the element, its value is changed to be that of the value parameter.
 
-I<C<name>>: The name of the attribute to create or alter@value: Value to set in string form
+I<C<name>>: The name of the attribute to create or alterI<value>: Value to set in string form
 
 C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
 
@@ -166,7 +166,7 @@ Adds a new attribute. If an attribute with the same I<namespaceURI> and localNam
 
 I<C<namespaceURI>>: The namespace URI of attribute to create or alter
 
-I<C<qualifiedName>>: The qualifiedName of the attribute to create or alter@value: Value to set in string form
+I<C<qualifiedName>>: The qualifiedName of the attribute to create or alterI<value>: Value to set in string form
 
 C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
 

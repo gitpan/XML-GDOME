@@ -5,7 +5,6 @@ use XML::GDOME;
 $loaded = 1;
 ok(1);
 use strict;
-
 my $doc = XML::GDOME->createDocument(undef, "TEST", undef);
 my $root = $doc->documentElement;
 ok($root->tagName, "TEST");
@@ -90,7 +89,8 @@ $doc = XML::GDOME->createDocFromURI("t/xml/test-document2.xml", GDOME_LOAD_PARSI
 
 my @els;
 for my $i (0 .. 8) {
-  $els[$i] = $doc->getElementById($i);
+  # very strange core dump if we remove quotes
+  $els[$i] = $doc->getElementById("$i");
 }
 
 my $nl = $doc->getElementsByTagName("NODE");

@@ -1,5 +1,5 @@
 XML::GDOME is generated automatically from the core.xml file in the
-libgdome distribution using generate.pl script.  Also, the documentation
+gdome2 distribution using generate.pl script.  Also, the documentation
 is generated automatically from embedded docs in gdome.c.
 
 To re-generate the code and docs, run
