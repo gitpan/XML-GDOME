@@ -7,7 +7,7 @@ extern "C" {
 #include "perl.h"
 #include "XSUB.h"
 
-#include <libxml/hash.h>
+/*#include <libxml/hash.h>*/
 #include <libxml/xmlerror.h>
 #include "gdome.h"
 #include "gdome-xpath.h"

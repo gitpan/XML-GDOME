@@ -7,7 +7,7 @@ use vars qw($VERSION @ISA @EXPORT);
 
 use XML::LibXML::Common qw(:encoding :w3c);
 
-$VERSION = '0.84';
+$VERSION = '0.85';
 
 require DynaLoader;
 require Exporter;

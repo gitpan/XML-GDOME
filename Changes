@@ -1,5 +1,9 @@
 Revision history for Perl extension XML::GDOME
 
+0.85  December 1st, 2003
+	- removed #include <libxml/hash.h> from GDOME.xs - workaround for libxml2 2.6.2
+		(Mike Castle)
+
 0.84  November 28th, 2003
 	- Updated Makefile.PL to work with gdome2 0.8 - see
 	rt.cpan.org ticket 4410
