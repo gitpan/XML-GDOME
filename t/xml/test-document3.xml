@@ -6,6 +6,9 @@
   <!ATTLIST NODE
     ITEM ID #REQUIRED
   >
+  <!ATTLIST tns:NODE
+    ITEM ID #REQUIRED
+  >
 ]>
 <TEST xmlns:tns="urn:test.tst">
   <OTHER>

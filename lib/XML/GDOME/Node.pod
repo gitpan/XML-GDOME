@@ -33,6 +33,7 @@
   $str      = $n->toString($mode);
   @nodes    = $n->findnodes($xpath);
               $n->iterator( \&nodehandler )
+  $pointer  = $n->gdome_ref;
 
 =head1 METHODS
 
@@ -145,11 +146,11 @@ I<C<newChild>>: The node to add
 
 I<Returns>: the node added.
 
-C<GDOME_HIERARCHY_REQUEST_ERR>: Raised if this node is of a type that does not allow children of the type of the I<newChild> node, or if the node to append is one of this node's ancestors or this node itself.
+C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised when the node is readonly.
 
 C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<newChild> was created from a different document than the one that created this node.
 
-C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised when the node is readonly.
+C<GDOME_HIERARCHY_REQUEST_ERR>: Raised if this node is of a type that does not allow children of the type of the I<newChild> node, or if the node to append is one of this node's ancestors or this node itself.
 
 
 =item $node = $n->cloneNode($deep);
@@ -187,13 +188,13 @@ I<C<refChild>>: the reference node, i.e., the node before which the new node    
 
 I<Returns>: the node being inserted.
 
-C<GDOME_HIERARCHY_REQUEST_ERR>: Raised if this node is of a type that does not allow children of the type of the I<newChild> node, or if the node to insert is one of this node's ancestors or this node itself.
+C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised when the node is readonly.
 
 C<GDOME_NOT_FOUND_ERR>: Raised if I<refChild> is not a child of this node.
 
 C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<newChild> was created from a different document than the one that created this node.
 
-C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised when the node is readonly.
+C<GDOME_HIERARCHY_REQUEST_ERR>: Raised if this node is of a type that does not allow children of the type of the I<newChild> node, or if the node to insert is one of this node's ancestors or this node itself.
 
 
 =item $bool = $n->isSupported($feature,$version);
@@ -220,9 +221,9 @@ I<C<oldChild>>: The node being removed
 
 I<Returns>: the node removed.
 
-C<GDOME_NOT_FOUND_ERR>: Raised if I<oldChild> is not a child of this node.
-
 C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised when the node is readonly.
+
+C<GDOME_NOT_FOUND_ERR>: Raised if I<oldChild> is not a child of this node.
 
 
 =item $node = $n->replaceChild($newChild,$oldChild);
@@ -235,13 +236,13 @@ I<C<oldChild>>: The node being replaced in the list
 
 I<Returns>: the node replaced.
 
-C<GDOME_HIERARCHY_REQUEST_ERR>: Raised if this node is of a type that does not allow children of the type of the I<newChild> node, or if the node to put in is one of this node's ancestors or this node itself.
+C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised when the node is readonly.
 
 C<GDOME_NOT_FOUND_ERR>: Raised if I<oldChild> is not a child of this node.
 
 C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<newChild> was created from a different document than the one that created this node.
 
-C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised when the node is readonly.
+C<GDOME_HIERARCHY_REQUEST_ERR>: Raised if this node is of a type that does not allow children of the type of the I<newChild> node, or if the node to put in is one of this node's ancestors or this node itself.
 
 
 =item $bool = $n->canAppend($newChild);
@@ -279,6 +280,13 @@ removes childnodes.
 The example will print all node names in the current subtree.
 
 I<Returns>: return value of the nodehandler while processing the last child of the current node.
+
+
+=item $pointer = $n->gdome_ref;
+
+This returns the pointer to the node in the underlying C libxml2 library.  It is useful for testing if two nodes are the same.  For namespace declaration attributes and xpath namespaces, returns pointer to libxml2 namespace.  Similar to getPointer method in XML::LibXML
+
+I<Returns>: Value of pointer to libxml2 C structure.
 
 
 =back

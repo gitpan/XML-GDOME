@@ -1,5 +1,16 @@
 Revision history for Perl extension XML::GDOME
 
+0.82  September 15th, 2002
+        - Require XML::LibXML::Common for rountines and constants
+          shared with XML::LibXML, removed duplicate
+          encodeToUTF8, decodeFromUTF8 functions from XML::GDOME.
+        - Fixed bug in generate script - use xpath instead of
+          getElementsByName.
+        - Doc fixes
+	- Fixed namespace in test-document3.xml DTD for
+	  libxml2 >= 2.4.23
+	- Checks for gdome2 0.7.2 or greater, not just equal
+
 0.81  June 5th, 2002
 	- Added toStringEnc method, supports encoding
 

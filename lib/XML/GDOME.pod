@@ -68,6 +68,7 @@ Matt Sergeant and Christian Glahn were the authors of XML::LibXML.
 
 Bug fixes and feature enhancements generously provided by:
 
+  Richard Titmuss
   Martin Oldfield
 
 Thanks!

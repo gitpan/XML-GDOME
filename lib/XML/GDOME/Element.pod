@@ -147,9 +147,9 @@ I<C<oldAttr>>: The Attr node to remove from the attribute list
 
 I<Returns>: the Attr node that was removed.
 
-C<GDOME_NOT_FOUND_ERR>: Raised if I<oldAttr> is not an attribute of the element.
-
 C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
+
+C<GDOME_NOT_FOUND_ERR>: Raised if I<oldAttr> is not an attribute of the element.
 
 
 =item $el->setAttribute($name,$value);
@@ -169,9 +169,9 @@ I<C<namespaceURI>>: The namespace URI of attribute to create or alter
 
 I<C<qualifiedName>>: The qualifiedName of the attribute to create or alterI<value>: Value to set in string form
 
-C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
-
 C<GDOME_NAMESPACE_ERR>: Raised if the I<qualifiedName> is malformed, if the I<qualifiedName> has a prefix and the I<namespaceURI> is undef, if the I<qualifiedName> has a prefix that is "xml" and the I<namespaceURI> is different from "http://www.w3.org/XML/1998/namespace", or if the I<qualifiedName> is "xmlns" and the namespaceURI is different from "http://www.w3.org/2000/xmlns/".
+
+C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
 
 
 =item $attr = $el->setAttributeNode($newAttr);
@@ -184,9 +184,9 @@ I<Returns>: if the I<newAttr> attribute replaces an existing attribute, the repl
 
 C<GDOME_INUSE_ATTRIBUTE_ERR>: Raised if I<newAttr> is already an attribute of another Element object. The DOM user must explicitly clone Attr nodes to re-use them in other elements.
 
-C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<newAttr> was created from a different document than the one that created the element.
-
 C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
+
+C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<newAttr> was created from a different document than the one that created the element.
 
 
 =item $attr = $el->setAttributeNodeNS($newAttr);
@@ -199,9 +199,9 @@ I<Returns>: if the I<newAttr> attribute replaces an existing attribute with the 
 
 C<GDOME_INUSE_ATTRIBUTE_ERR>: Raised if I<newAttr> is already an attribute of another Element object. The DOM user must explicitly clone Attr nodes to re-use them in other elements.
 
-C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<newAttr> was created from a different document than the one that created the element.
-
 C<GDOME_NO_MODIFICATION_ALLOWED_ERR>: Raised if this node is readonly.
+
+C<GDOME_WRONG_DOCUMENT_ERR>: Raised if I<newAttr> was created from a different document than the one that created the element.
 
 
 =item $elem->appendText($PCDATA);

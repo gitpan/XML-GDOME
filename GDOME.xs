@@ -2610,32 +2610,6 @@ iterateNext(self)
 
 MODULE = XML::GDOME         PACKAGE = XML::GDOME
 
-SV*
-encodeToUTF8( encoding, string )
-        const char * encoding
-        const char * string
-    PREINIT:
-        char * tstr;
-    CODE:
-        tstr =  domEncodeString( encoding, string );
-        RETVAL = newSVpvn( (char *)tstr, xmlStrlen( tstr ) );
-        xmlFree( tstr );
-    OUTPUT:
-        RETVAL
- 
-SV*
-decodeFromUTF8( encoding, string )
-        const char * encoding
-        const char * string
-    PREINIT:
-        char * tstr;
-    CODE:
-        tstr =  domDecodeString( encoding, string );
-        RETVAL = newSVpvn( (char *)tstr, xmlStrlen( tstr ) );
-        xmlFree( tstr );
-    OUTPUT:
-        RETVAL
-
 SV *
 _match_callback(self, ...)
         SV * self

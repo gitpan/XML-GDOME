@@ -17,7 +17,7 @@ eval {
     print "running gdome-config... ";
     my $ver = backtick('gdome-config --version');
     my ($major, $minor, $point) = $ver =~ /(\d+).(\d+)\.(\d+)/g;
-    die "VERSION" unless $major == 0 && $minor == 7 && $point == 2;
+    die "VERSION" unless $major == 0 && $minor == 7 && $point >= 2;
     $config{LIBS} ||= backtick('gdome-config --libs');
     $config{INC} ||= backtick('gdome-config --cflags');
     print "ok\n";
@@ -59,10 +59,12 @@ if ($config{LIBS} !~ /\-lglib\b/) {
 WriteMakefile(
     'NAME'		=> 'XML::GDOME',
     'VERSION_FROM'	=> 'GDOME.pm', # finds $VERSION
-    'PREREQ_PM'		=> { 'XML::SAX' => 0 }, # e.g., Module::Name => 1.1
+    'PREREQ_PM'		=> { 'XML::SAX' => 0,
+                             'XML::LibXML::Common' => 0 },
     'AUTHOR'            => 'T.J. Mather',
     'ABSTRACT'          => 'Interface to gdome2 library',
     'OBJECT'            => '$(O_FILES)', # add the DOM extensions to libxml2
+    INCLUDE_EXT => ['XML::LibXML::Common'],
     %config,
 );
 

@@ -49,6 +49,7 @@ ok ($res->booleanValue, 1);
 
 $res = $doc->xpath_evaluate("//namespace::*");
 $gnode = $res->iterateNext;
+$gnode = $res->iterateNext;
 ok ($gnode->nodeType, XPATH_NAMESPACE_NODE);
 ok ($gnode->prefix, "foo");
 ok ($gnode->nodeName, "foo");

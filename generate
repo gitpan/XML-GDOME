@@ -3,7 +3,7 @@
 # copyright 2001, T.J. Mather
 
 use strict;
-use XML::LibXML;
+use XML::GDOME;
 use Tie::IxHash;
 use Data::Dumper;
 
@@ -363,7 +363,9 @@ print PM q{package XML::GDOME;
 use strict;
 use vars qw($VERSION @ISA @EXPORT);
 
-$VERSION = '0.81';
+use XML::LibXML::Common qw(:encoding :w3c);
+
+$VERSION = '0.82';
 
 require DynaLoader;
 require Exporter;
@@ -376,7 +378,7 @@ my $di = XML::GDOME::DOMImplementation::mkref();
 
 };
 
-my $parser = XML::LibXML->new;
+my $parser = XML::GDOME->new;
 
 my @nodes;
 
@@ -439,10 +441,6 @@ BOOT:
 END
   $firstTime = 0;
 
-#/* 
-# * gdome_ref:
-# * \@self:  Gdome Node pointer
-# *
 # * used by XML::Canonical if nowhere else.  Returns
 # * pointer to underlying node, or namespace for namespace declaration
 # * attributes and xpath namespaces.
@@ -535,13 +533,14 @@ process_xinclude(self)
 END
   }
 
-  my @attr = $_->getElementsByTagName("ATTR");
-  my @method = $_->getElementsByTagName("METHOD");
+  my @attr = $_->findnodes("./ATTR");
+  my @method = $_->findnodes("./METHOD");
   for (@attr) {
     my $readonly = $_->getAttribute("READONLY");
     my $type = $_->getAttribute("TYPE");
     my $bless = getBless($type);
     my $method = $_->getAttribute("NAME");
+    my $pn = $_->getParentNode->getAttribute("NAME");
     my $Method = ucfirst($method);
     my $private;
     if ($method eq 'attributes' ||
@@ -680,7 +679,7 @@ END
       next;
     }
     my $raw = $_->getAttribute("RAW");
-    my @param = $_->getElementsByTagName("PARAM");
+    my @param = $_->findnodes("./PARAM");
     my @args = ();
     my $exception = ',&exc';
     my $bless = getBless($return);
@@ -803,7 +802,7 @@ END
 				     return => "string representation of DOM tree",
 				    };
     $synopsis{"toStringEnc"} = q{$str = $doc->toStringEnc($encoding,$mode);};
-    $docs->{Document}->{toString} = {
+    $docs->{Document}->{toStringEnc} = {
 				     desc => "Save the DOM tree of the Document to a string",
 				     vars => {
 					      encoding => "character encoding to use when generating XML text",
@@ -835,6 +834,11 @@ removes childnodes.
 The example will print all node names in the current subtree.},
 			            return => "return value of the nodehandler while processing the last child of the current node."
 		       };
+    $synopsis{"gdome_ref"} = q{$pointer = $n->gdome_ref;};
+    $docs->{Node}->{gdome_ref} = {
+				     desc => "This returns the pointer to the node in the underlying C libxml2 library.  It is useful for testing if two nodes are the same.  For namespace declaration attributes and xpath namespaces, returns pointer to libxml2 namespace.  Similar to getPointer method in XML::LibXML",
+				     return => "Value of pointer to libxml2 C structure.",
+				    };
   } elsif($class eq 'Element') {
     $synopsis{"appendText"} = q{$elem->appendText($PCDATA);};
     $docs->{Element}->{appendText} = {
@@ -921,7 +925,12 @@ decodeFromUTF8
 );\n\n};
 
 while (my ($k, $v) = each %constants) {
-  print PM "sub $k(){$v;}\n";
+  if ($k !~ m!_NODE$! ||
+      $k eq 'READONLY_NODE' ||
+      $k eq 'READWRITE_NODE' ||
+      $k eq 'XPATH_NAMESPACE_NODE' ) {
+    print PM "sub $k(){$v;}\n";
+  }
 }
 print PM "\n";
 
@@ -1368,32 +1377,6 @@ sub createPI {
 print XS qq{
 
 MODULE = XML::GDOME         PACKAGE = XML::GDOME
-
-SV*
-encodeToUTF8( encoding, string )
-        const char * encoding
-        const char * string
-    PREINIT:
-        char * tstr;
-    CODE:
-        tstr =  domEncodeString( encoding, string );
-        RETVAL = newSVpvn( (char *)tstr, xmlStrlen( tstr ) );
-        xmlFree( tstr );
-    OUTPUT:
-        RETVAL
- 
-SV*
-decodeFromUTF8( encoding, string )
-        const char * encoding
-        const char * string
-    PREINIT:
-        char * tstr;
-    CODE:
-        tstr =  domDecodeString( encoding, string );
-        RETVAL = newSVpvn( (char *)tstr, xmlStrlen( tstr ) );
-        xmlFree( tstr );
-    OUTPUT:
-        RETVAL
 
 SV *
 _match_callback(self, ...)

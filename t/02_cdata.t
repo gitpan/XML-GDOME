@@ -38,4 +38,3 @@ my $node = $txt->nextSibling;
 ok($node->gdome_ref, $txt1->gdome_ref);
 $node = $txt1->previousSibling;
 ok($node->gdome_ref, $txt->gdome_ref);
-
